@@ -427,6 +427,7 @@ body.photo .top,body.photo .mini,body.photo .btns,body.photo .stick,body.photo .
     <button class="cta" id="btCreate" type="button">CREATE LOBBY</button>
     <div class="step"><h2>Join a friend's lobby</h2><div class="joinrow"><input class="field" id="btCode" maxlength="8" placeholder="CODE" autocomplete="off" spellcheck="false"><button class="ghost" id="btJoin" type="button">JOIN</button></div></div>
     <button class="ghost" id="btPractice" type="button">PRACTICE VS BOTS</button>
+    <p style="margin:6px 0 0;font:500 12px ui-monospace,monospace;color:#7f93a3;text-align:center">UFSM 1.2 · online play on</p>
     <p class="note2" id="btStatus" aria-live="polite"></p>
     <p class="note2">Friends need to be signed in to Claude, and you need to share this game with them from its Share menu.</p>
     <button class="ghost" id="btBack" type="button">BACK</button>
@@ -2951,6 +2952,6 @@ window.__ready=true; window.__dbg={input,towns,A,quitBattle,keys,kbTick,nukes,nu
   b.onclick=function(){ sm.textContent='Preparing download…'; fetch('UFSM.html').then(function(r){ if(!r.ok) throw 0; return r.blob(); }).then(function(bl){ return dl.save({filename:'UFSM.html',data:bl}); }).then(function(){ sm.textContent='Saved! Open UFSM.html to play'; }).catch(function(e){ sm.textContent=(e&&e.code==='declined')?'Download cancelled':'Download not available here'; }); };
  }); }catch(e){} })();</script>
 
-<script>if('serviceWorker' in navigator){ addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }</script>
+<script>if('serviceWorker' in navigator){ var hadC=!!navigator.serviceWorker.controller; navigator.serviceWorker.addEventListener('controllerchange',function(){ if(hadC) location.reload(); }); addEventListener('load',()=>navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{})); }</script>
 </body>
 </html>
