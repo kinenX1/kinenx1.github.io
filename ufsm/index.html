@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>UFSM – Updated Flight Simulator Mobile</title>
+<meta name="description" content="Free 3D flight simulator: F-22, F-15E, F-16, F-14, F-5 and Cessna over Hubla, Sura and Tirak. Download for Android or PC.">
+<meta property="og:title" content="UFSM – Updated Flight Simulator Mobile">
+<meta property="og:description" content="Free 3D flight simulator. Download on mobile or PC.">
+<meta property="og:image" content="cover.jpg">
+<meta name="theme-color" content="#070b10">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root{--bg:#070b10;--panel:#101821;--line:#22303d;--fg:#f2f1ea;--mute:#93a3b1;--gold:#f2c14e;--mob:#1f9d55;--pc:#2b5fd9;--display:'Poppins',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font:15px/1.55 var(--display);padding:max(20px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 40px max(16px,env(safe-area-inset-left))}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.cover{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);aspect-ratio:16/9}
+.cover img{width:100%;height:100%;object-fit:cover;display:block}
+.cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(7,11,16,.92))}
+.logo{position:absolute;left:18px;bottom:14px;z-index:1;display:flex;align-items:center;gap:12px}
+.logo img{width:52px;height:52px;border-radius:12px}
+.logo b{display:block;font-size:40px;font-weight:800;letter-spacing:.06em;color:var(--gold);line-height:1}
+.logo span{font-size:11px;letter-spacing:.2em;text-transform:uppercase}
+h1{font-size:20px;margin:0;text-align:center}
+.pick{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:420px){.pick{grid-template-columns:1fr}}
+.btn{border-radius:14px;padding:20px 16px;color:#fff;font:700 19px var(--display);letter-spacing:.06em;text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:6px;transition:transform .12s,filter .12s}
+.btn:hover{filter:brightness(1.1)}.btn:active{transform:scale(.97)}
+.btn:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.btn svg{width:34px;height:34px}
+.btn small{font:500 12px var(--display);letter-spacing:.02em;opacity:.85}
+.mob{background:var(--mob)}.pc{background:var(--pc)}
+.sheet{display:none;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.sheet.on{display:flex}
+.sheet h2{margin:0;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+.opt{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;background:#16212c;border:1px solid var(--line);color:var(--fg);text-decoration:none}
+.opt:hover{border-color:var(--gold)}
+.opt b{display:block}.opt span{font-size:13px;color:var(--mute)}
+.opt i{font-style:normal;font-size:24px;width:32px;text-align:center}
+.notes{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.notes p{margin:0}
+kbd{font:500 12px var(--mono);background:#1b2733;border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+.spec{font:500 12px var(--mono);color:var(--mute);text-align:center;margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="cover">
+    <img src="cover.jpg" alt="Five UFSM jets flying in formation with colored smoke">
+    <div class="logo"><img src="icon.png" alt=""><div><b>UFSM</b><span>Updated Flight Simulator Mobile</span></div></div>
+  </div>
+
+  <h1>Download on PC or mobile</h1>
+  <div class="pick">
+    <a class="btn mob" href="#mobile" id="bMob">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
+      MOBILE<small>Android · iPhone</small>
+    </a>
+    <a class="btn pc" href="#pc" id="bPc">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      PC<small>Windows · Mac · Linux</small>
+    </a>
+  </div>
+
+  <div class="sheet" id="mobile">
+    <h2>Mobile</h2>
+    <a class="opt" href="UFSM.apk" download="UFSM.apk"><i>🤖</i><div><b>Android app (APK)</b><span>Download, tap it, allow "Install unknown apps", Install. The UFSM icon appears on your home screen.</span></div></a>
+    <a class="opt" href="play/"><i>🍎</i><div><b>iPhone</b><span>Opens the game in Safari. Tap Share ⎙ then "Add to Home Screen" to get the UFSM icon.</span></div></a>
+  </div>
+
+  <div class="sheet" id="pc">
+    <h2>PC</h2>
+    <a class="opt" href="UFSM.html" download="UFSM.html"><i>⬇</i><div><b>Download UFSM.html</b><span>Double-click it to play. Works offline.</span></div></a>
+    <a class="opt" href="play/"><i>▶</i><div><b>Play now in the browser</b><span>In Chrome or Edge, click the install icon in the address bar to add UFSM as an app.</span></div></a>
+  </div>
+
+  <div class="notes">
+    <p><b>Controls on PC:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> fly, <kbd>Shift</kbd>/<kbd>Ctrl</kbd> throttle, <kbd>G</kbd> gear, <kbd>F</kbd> flaps, <kbd>Z</kbd> spoilers, <kbd>Space</kbd> gun, mouse to look.</p>
+    <p>Free. Six aircraft, three countries, random weather and time of day, battles against bots.</p>
+  </div>
+  <p class="spec">UFSM 1.0 · F-22 · F-15E · F-16 · F-14 · F-5 · Cessna 172</p>
+</div>
+<script>
+(function(){
+  function show(id){ ['mobile','pc'].forEach(function(k){ document.getElementById(k).classList.toggle('on',k===id); }); }
+  function route(){ var h=location.hash.slice(1); if(h==='mobile'||h==='pc') show(h); }
+  window.addEventListener('hashchange',route); route();
+  if(!location.hash){ var m=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent); document.getElementById(m?'bMob':'bPc').style.boxShadow='0 0 0 3px #f2c14e'; }
+})();
+</script>
+</body>
+</html>
