@@ -471,6 +471,7 @@ body.photo .top,body.photo .mini,body.photo .btns,body.photo .stick,body.photo .
 </div>
 
 <script src="lib/three/build/three.min.js"></script>
+<script src="lib/mqtt.min.js"></script>
 <script src="lib/three/examples/js/objects/Sky.js"></script>
 <script src="lib/three/examples/js/objects/Lensflare.js"></script>
 <script src="lib/three/examples/js/shaders/CopyShader.js"></script>
@@ -2315,7 +2316,26 @@ function saveProf(){ try{ localStorage.setItem('ufsm-prof',JSON.stringify(prof))
 const bt={active:false,practice:false,R:null,named:false,code:'',me:'',host:false,inLobby:false,state:0,role:'',team:'M',hp:100,maxHp:100,alive:false,kills:0,deaths:0,seq:0,ev:[],seen:new Set(),known:new Set(),av:new Map(),
   score:[0,0],lim:30,dur:600,left:600,pos:new V3(),vy:0,yaw:0,pitch:0,onG:true,wi:0,ammo:[],res:[],reloadT:0,fireT:0,fireHeld:false,firePressed:false,jumpReq:false,tank:null,projs:[],bots:[],spawn:'front',
   lastNet:0,gs:null,soldier:null,deadT:0,lastHit:null,dying:false,fixedEnv:false,spect:new V3(),secT:0,feed:[],hostGsSeen:-1,tod:'day',wx:'clear',mgT:0};
-let roomNS=null; (window.claude&&window.claude.use?window.claude.use('room'):Promise.resolve(null)).then(r=>{ roomNS=r; }).catch(()=>{});
+// Online rooms: Claude room when running inside Claude, otherwise a public MQTT relay so downloaded copies (APK, HTML, website) play online together.
+const MQ_BROKERS=(window.UFSM_BROKERS||['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt']);
+function mqRooms(){ return { join(name){ return new Promise((res,rej)=>{ if(!window.mqtt){ rej(new Error('nomqtt')); return; }
+    const me=Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4), base='ufsm1/'+name+'/p/', peers=new Map(); let mine={}, cb=null, done=false, cli=null, bi=0, prune=null, lastPub=0;
+    const fire=()=>{ if(cb) try{ cb(); }catch(e){} };
+    const R={ peers(){ const now=Date.now(), out=[{peer:me,kind:'viewer',presence:mine,isMe:true,sameTab:true}]; peers.forEach((v,k)=>{ if(now-v.t<12000) out.push({peer:k,kind:'viewer',presence:v.p,isMe:false,sameTab:false}); }); return out; },
+      presence(patch){ Object.assign(mine,patch||{}); lastPub=Date.now(); if(cli&&cli.connected){ try{ cli.publish(base+me,JSON.stringify(mine),{qos:0}); }catch(e){} } return Promise.resolve(); },
+      onPeers(fn){ cb=fn; return ()=>{ cb=null; }; },
+      leave(){ try{ cli.publish(base+me,'',{qos:0}); }catch(e){} clearInterval(prune); setTimeout(()=>{ try{ cli.end(true); }catch(e){} },200); return Promise.resolve(); } };
+    const tryB=()=>{ if(bi>=MQ_BROKERS.length){ rej(new Error('offline')); return; } const url=MQ_BROKERS[bi++];
+      let c; try{ c=window.mqtt.connect(url,{clientId:'ufsm_'+me,clean:true,keepalive:20,reconnectPeriod:2000,connectTimeout:7000,will:{topic:base+me,payload:'',qos:0,retain:false}}); }catch(e){ tryB(); return; }
+      const to=setTimeout(()=>{ if(!done){ try{ c.end(true); }catch(e){} tryB(); } },7500);
+      c.on('connect',()=>{ c.subscribe(base+'+',{qos:0}); if(!done){ done=true; clearTimeout(to); cli=c; prune=setInterval(()=>{ const now=Date.now(); let ch=false; peers.forEach((v,k)=>{ if(now-v.t>12000){ peers.delete(k); ch=true; } }); if(ch) fire(); if(now-lastPub>1500) R.presence(); },1000); res(R); } });
+      c.on('message',(t,m)=>{ const id=t.slice(base.length); if(id===me) return; const txt=m.toString(); if(!txt){ if(peers.delete(id)) fire(); return; }
+        let pr; try{ pr=JSON.parse(txt); }catch(e){ return; } if(!pr||typeof pr!=='object') return; const isNew=!peers.has(id); peers.set(id,{p:pr,t:Date.now()}); if(isNew) fire(); });
+      c.on('error',()=>{}); };
+    tryB(); }); } }; }
+let roomNS=null, roomKind='';
+(window.claude&&window.claude.use?window.claude.use('room'):Promise.resolve(null)).then(r=>{ if(r){ roomNS=r; roomKind='claude'; } else if(window.mqtt){ roomNS=mqRooms(); roomKind='net'; } }).catch(()=>{ if(window.mqtt){ roomNS=mqRooms(); roomKind='net'; } });
+if(!(window.claude&&window.claude.use)&&window.mqtt){ roomNS=mqRooms(); roomKind='net'; }
 const teamKey=t=>t==='A'?1:0, other=t=>t==='M'?'A':'M';
 function pushEv(e){ e.i=++bt.seq; bt.ev.push(e); if(bt.ev.length>12) bt.ev.shift(); }
 const r1=v=>Math.round(v*10)/10, r3=v=>Math.round(v*1000)/1000;
@@ -2549,8 +2569,8 @@ function quitBattle(){ const R=bt.R; if(R&&!bt.practice){ if(bt.named) R.leave()
 function btStatus(t){ $('btStatus').textContent=t; }
 function genCode(){ const A2='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<5;i++) s+=A2[Math.floor(Math.random()*A2.length)]; return s; }
 async function joinLobby(code,asHost){ code=String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8); if(code.length<4){ btStatus('Type the 5-letter lobby code.'); return; }
-  if(!roomNS){ btStatus(window.claude?'Online play is not available in this view. Open UFSM from its Claude link while signed in, and ask the owner to share it with you.':'Online play works in the Claude version of UFSM. Practice vs bots works here.'); return; }
-  btStatus('Connecting…'); let R=null, named=false; try{ R=await roomNS.join('ufsm-'+code.toLowerCase()); named=true; }catch(e){ R=roomNS; }
+  if(!roomNS){ btStatus('Could not start online play. Check your internet connection and try again.'); return; }
+  btStatus('Connecting…'); let R=null, named=false; try{ R=await roomNS.join('ufsm-'+code.toLowerCase()); named=true; }catch(e){ if(roomKind==='net'){ btStatus('Could not reach the online server. Check your internet and try again.'); return; } R=roomNS; }
   bt.R=R; bt.named=named; bt.code=code; bt.host=!!asHost; bt.inLobby=true; bt.state=0; bt.practice=false; bt.team=prof.team; bt.seen=new Set(); bt.known=new Set(); bt.score=[0,0]; bt.ev=[]; bt.gs=null;
   try{ R.onPeers(()=>{ if(!$('btLobby').hidden) renderLobby(); }); }catch(e){}
   bt.me=myPeer(); await R.presence(myState()).catch(()=>{}); btStatus(''); showLobby();
