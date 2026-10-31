@@ -508,8 +508,15 @@ h1{font-family:var(--roman);font-weight:900;font-size:clamp(48px,12.5vw,118px);l
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 /* ============ SETTINGS ============ */
-const COMMANDER_EMAIL = "";            // the Gmail that manages applications
-const firebaseConfig = null;           // paste your Firebase config object here
+const COMMANDER_EMAILS = ["kinen.taktak@gmail.com","kinen.taktak1@gmail.com"];   // Gmails that manage applications
+const firebaseConfig = {
+  apiKey: "AIzaSyAggfBOZ1uhHlooZB92ehRMq_q8WODq5jM",
+  authDomain: "spartans-739cc.firebaseapp.com",
+  projectId: "spartans-739cc",
+  storageBucket: "spartans-739cc.firebasestorage.app",
+  messagingSenderId: "929883033187",
+  appId: "1:929883033187:web:a78c8d0a70200664fe7256"
+};
 const TERRITORY = {                    // starting map; once you change it on the dashboard, the saved map wins
   "Greater Rockford":"SRAF","USS Carrier":"SRAF","Perth":"SRAF",
   "Orenji":"TTMD","Izolirani":"TTMD","Grindavik":"TTMD",
@@ -525,10 +532,11 @@ const TERRITORY = {                    // starting map; once you change it on th
     if(firebaseConfig && window.firebase){
       firebase.initializeApp(firebaseConfig);
       fs=firebase.firestore(); auth=firebase.auth();
-      authReady=new Promise(res=>{ const un=auth.onAuthStateChanged(u=>{un();res(u);}); });
+      authReady=auth.getRedirectResult().catch(()=>null).then(()=>new Promise(res=>{ const un=auth.onAuthStateChanged(u=>{un();res(u);}); }));
+      try{ if(sessionStorage.getItem('sp_cmd')){ sessionStorage.removeItem('sp_cmd'); if(location.hash!=='#command') location.hash='command'; } }catch{}
     }
   }catch(e){ console.error(e); fs=null; }
-  const boss=u=>!!(u&&u.email&&COMMANDER_EMAIL&&u.email.toLowerCase()===COMMANDER_EMAIL.toLowerCase());
+  const boss=u=>!!(u&&u.email&&COMMANDER_EMAILS.includes(u.email.toLowerCase()));
   const newId=()=>'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
   const db={
     doc(path){
@@ -563,7 +571,12 @@ const TERRITORY = {                    // starting map; once you change it on th
   window.claude={use:async n=>n==='db'?db:n==='user'?user:null};
   window.spartansAuth={
     connected:!!fs,
-    async signIn(){ if(!auth) throw new Error('not connected'); await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); },
+    async signIn(){
+      if(!auth) throw new Error('not connected');
+      const pr=new firebase.auth.GoogleAuthProvider(); pr.setCustomParameters({prompt:'select_account'});
+      try{ await auth.signInWithPopup(pr); }
+      catch(e){ if(e&&/popup|cancelled-popup|operation-not-supported/.test(e.code||'')){ sessionStorage.setItem('sp_cmd','1'); await auth.signInWithRedirect(pr); } else throw e; }
+    },
     async signOut(){ if(auth) await auth.signOut(); },
     current:()=>authReady
   };
@@ -1126,7 +1139,7 @@ aiPanel=()=>'';
 $('gsign').addEventListener('click',async()=>{
   const m=$('lockmsg');
   try{ const u=await spartansAuth.current(); if(u) await spartansAuth.signOut(); await spartansAuth.signIn(); location.reload(); }
-  catch(e){ m.textContent = spartansAuth.connected ? 'Sign-in did not work. Try again, and allow pop-ups for this site.' : 'The dashboard is not connected yet.'; }
+  catch(e){ m.textContent = spartansAuth.connected ? 'Sign-in did not work ('+((e&&e.code)||'error')+'). Try again.' : 'The dashboard is not connected to the database yet.'; }
 });
 spartansAuth.current().then(u=>{
   if(u && !isOwner){ $('lockmsg').textContent='Signed in as '+u.email+'. This account is not the commander\'s.'; $('gsign').textContent='Use another account'; }
