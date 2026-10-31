@@ -305,7 +305,12 @@ h1{font-family:var(--roman);font-weight:900;font-size:clamp(48px,12.5vw,118px);l
   <header class="topbar">
     <div class="brand"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="90" fill="none" stroke="var(--accent)" stroke-width="12"/><path d="M100 38 L152 156 H132 L100 82 L68 156 H48 Z" fill="var(--accent)"/></svg>SPARTANS</div>
     <div class="live"><i></i>Recruiting</div>
-    <form id="codeform" hidden><input id="code" type="hidden"><span id="codemsg"></span></form>
+    <form class="codebar" id="codeform" novalidate>
+      <label for="code">Private code</label>
+      <input type="text" id="code" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="•••">
+      <button type="submit">Enter</button>
+      <span class="msg" id="codemsg"></span>
+    </form>
   </header>
 
   <nav class="rail" id="rail" aria-label="Menu">
@@ -364,7 +369,7 @@ h1{font-family:var(--roman);font-weight:900;font-size:clamp(48px,12.5vw,118px);l
       </section>
 
       <section class="screen" data-screen="enlist" id="s-enlist">
-        <div class="shead" id="enlist"><div class="tag">Recruitment office</div><h2 data-type="Enlist">Enlist</h2><p>Six short steps. When you submit, your application goes straight to Spartan command on Discord.</p></div>
+        <div class="shead" id="enlist"><div class="tag">Recruitment office</div><h2 data-type="Enlist">Enlist</h2><p>Six short steps. When you submit, your application goes straight to Spartan command.</p></div>
         <div class="progress" aria-hidden="true">
           <div class="progress-row"><span>Application progress</span><span id="pct">0%</span></div>
           <div class="bar"><i id="pbar"></i></div>
@@ -454,7 +459,7 @@ h1{font-family:var(--roman);font-weight:900;font-size:clamp(48px,12.5vw,118px);l
         <section class="sheet" id="done" hidden>
       <div class="done">
         <h2>Application received</h2>
-        <p>Your application was sent to Spartan command on Discord. Your result, your unit and your test score come in a letter on Discord.</p>
+        <p>Your application was sent to Spartan command. Your result, your unit and your test score come in a letter on Discord.</p>
         <p>Status: <span class="pill pending" id="my-status">pending</span></p>
         <p class="msg" id="edit-wrap"><button type="button" id="edit">Send a corrected application</button></p>
       </div>
@@ -462,8 +467,10 @@ h1{font-family:var(--roman);font-weight:900;font-size:clamp(48px,12.5vw,118px);l
       </section>
     </div>
 
-    <div class="screen" style="max-width:900px" hidden>
-    <section class="sheet" id="locked" hidden><h2>Command only</h2><p class="msg">This page is for Spartan command. Applicants: <a href="#s-enlist">go to the application form</a>.</p></section>
+    <div class="screen" style="max-width:900px">
+    <section class="sheet" id="locked" hidden><div class="tag">Spartans · Manager dashboard</div><h2>Command only</h2>
+ <p class="msg" id="lockmsg">Sign in with the commander's Google account to see the applications.</p>
+ <div class="actions"><button type="button" class="primary" id="gsign">Sign in with Google</button><a href="#s-home">Back to the site</a></div></section>
     <section class="sheet" id="board" hidden>
     <div class="actions" style="justify-content:space-between"><div class="tag">Spartans · Manager dashboard</div><a href="#s-home" style="color:var(--muted);font-size:14px">Exit</a></div>
     <div class="board-head"><h2>Command board</h2><span class="counts" id="counts"></span></div>
@@ -496,52 +503,70 @@ h1{font-family:var(--roman);font-weight:900;font-size:clamp(48px,12.5vw,118px);l
   </main>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-/* ============ SETTINGS: edit these ============ */
-const DISCORD_WEBHOOK = "";   // paste your Discord webhook URL between the quotes
-const TERRITORY = {          // which unit holds each place: SRAF, TTMD, CSSB, UGEF (or remove a line for unassigned)
+/* ============ SETTINGS ============ */
+const COMMANDER_EMAIL = "";            // the Gmail that manages applications
+const firebaseConfig = null;           // paste your Firebase config object here
+const TERRITORY = {                    // starting map; once you change it on the dashboard, the saved map wins
   "Greater Rockford":"SRAF","USS Carrier":"SRAF","Perth":"SRAF",
   "Orenji":"TTMD","Izolirani":"TTMD","Grindavik":"TTMD",
   "Cyprus":"CSSB","Saint Barthélemy":"CSSB","HMS Carrier":"CSSB",
   "Oil Rig":"UGEF","Sauthemptona":"UGEF","Skopelos":"UGEF"
 };
-/* ============================================== */
+/* ================================== */
 
-/* Standalone adapter: applications go to Discord through the webhook */
+/* Firebase adapter: gives the page the same db/user interface it uses on Claude */
 (function(){
-  const cut=(t,n)=>{t=String(t||'-');return t.length>n?t.slice(0,n-1)+'…':t;};
-  async function sendApplication(a){
-    if(!DISCORD_WEBHOOK) throw new Error('no webhook');
-    const sc=(a.quiz||[]).filter((k,i)=>k===QUIZ[i][2]).length;
-    const unitName=UNITS[a.unitChoice]||a.unitChoice;
-    const letter=`🛡️ **SPARTANS COMMAND · ENLISTMENT RESULT**\n\nTo: ${a.discord} (Roblox: ${a.roblox})\nResult: ✅ ACCEPTED\nUnit: ${unitName}\nRole(s): ${(a.roles||[]).join(', ')}\nKnowledge test: ${sc}/${QUIZ.length}\n\nTraining is every 2 days. Watch the training channel for times and be there.\n\nWelcome to the Spartans.`;
-    const embed={
-      title:cut(`New application · ${a.discord}`,250),
-      color: {SRAF:0xE1262F,TTMD:0xE3A23A,CSSB:0x4F8FD6,UGEF:0xA07BE0}[a.unitChoice]||0xE1262F,
-      fields:[
-        {name:'Discord',value:cut(a.discord,1000),inline:true},{name:'Roblox',value:cut(a.roblox,1000),inline:true},{name:'Age',value:cut(a.age,100),inline:true},
-        {name:'Wants unit',value:cut(unitName,1000),inline:true},{name:'Roles',value:cut((a.roles||[]).join(', '),1000),inline:true},{name:'Timezone',value:cut(a.timezone,100),inline:true},
-        {name:'Test score',value:`**${sc}/${QUIZ.length}**`,inline:true},{name:'PTFS experience',value:cut(`${a.experience} · ${a.hours} h/week`,1000),inline:true},{name:'Can train every 2 days',value:cut(a.trainAvail,100),inline:true},
-        {name:'Mic',value:cut(a.mic,100),inline:true},{name:'Favorite aircraft',value:cut(a.aircraft,1000),inline:true},{name:'Previous group',value:cut(a.previous,1000),inline:true},
-        {name:'Best skill',value:cut(a.skill,1000)},
-        {name:'Escort scenario',value:cut(a.s1,1000)},{name:'Engine failure',value:cut(a.s2,1000)},{name:'Why pick me',value:cut(a.why,1000)}],
-      footer:{text:'Spartans recruitment · react ✅ or ❌'},timestamp:new Date().toISOString()};
-    const body=new FormData();
-    body.append('payload_json',JSON.stringify({username:'Spartans Recruitment',embeds:[embed],
-      content:cut('**Ready-made letter (copy, change the unit if needed, send to them):**\n```\n'+letter+'\n```',1990),allowed_mentions:{parse:[]}}));
-    const r=await fetch(DISCORD_WEBHOOK,{method:'POST',body});
-    if(!r.ok) throw new Error('discord '+r.status);
-  }
+  let fs=null, auth=null, authReady=Promise.resolve(null);
+  try{
+    if(firebaseConfig && window.firebase){
+      firebase.initializeApp(firebaseConfig);
+      fs=firebase.firestore(); auth=firebase.auth();
+      authReady=new Promise(res=>{ const un=auth.onAuthStateChanged(u=>{un();res(u);}); });
+    }
+  }catch(e){ console.error(e); fs=null; }
+  const boss=u=>!!(u&&u.email&&COMMANDER_EMAIL&&u.email.toLowerCase()===COMMANDER_EMAIL.toLowerCase());
+  const newId=()=>'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
   const db={
-    doc(path){ return {
-      set:d=>path.startsWith('applications/')?sendApplication(d):Promise.resolve(),
-      update:()=>Promise.resolve(),
-      onSnapshot(cb){ setTimeout(()=>cb(path==='map/places'?{exists:true,data:()=>TERRITORY}:{exists:false,data:()=>undefined}),0); return ()=>{}; }
-    }; },
-    collection(){ return {onSnapshot(){return ()=>{};}}; }
+    doc(path){
+      const [col,id]=path.split('/');
+      return {
+        async set(d){
+          if(!fs) throw new Error('not connected');
+          if(col==='applications'){
+            const c=JSON.parse(JSON.stringify(d)); c.uid=newId(); c.submittedAt=Date.now(); c.updatedAt=Date.now(); c.status='pending'; c.unit=''; c.note='';
+            return fs.collection('applications').doc(c.uid).set(c);
+          }
+          return fs.collection(col).doc(id).set(d);
+        },
+        update(d){ return fs?fs.collection(col).doc(id).update(d):Promise.reject(new Error('not connected')); },
+        onSnapshot(cb){
+          if(col==='map'){
+            if(!fs){ setTimeout(()=>cb({exists:true,data:()=>TERRITORY}),0); return ()=>{}; }
+            return fs.collection('map').doc(id).onSnapshot(sn=>cb({exists:true,data:()=>sn.exists?sn.data():TERRITORY}),()=>cb({exists:true,data:()=>TERRITORY}));
+          }
+          setTimeout(()=>cb({exists:false,data:()=>undefined}),0); return ()=>{};
+        }
+      };
+    },
+    collection(path){
+      return { onSnapshot(cb,err){
+        if(!fs){ err&&err({code:'unavailable'}); return ()=>{}; }
+        return fs.collection(path).onSnapshot(q=>cb({docs:q.docs.map(d=>({id:d.id,data:()=>d.data()}))}),e=>{console.error(e);err&&err(e);});
+      }};
+    }
   };
-  const user={id:async()=>'local',isOwner:async()=>false};
+  const user={ id:async()=>'visitor', isOwner:async()=>boss(await authReady) };
   window.claude={use:async n=>n==='db'?db:n==='user'?user:null};
+  window.spartansAuth={
+    connected:!!fs,
+    async signIn(){ if(!auth) throw new Error('not connected'); await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); },
+    async signOut(){ if(auth) await auth.signOut(); },
+    current:()=>authReady
+  };
 })();
 </script>
 <script>
@@ -629,7 +654,7 @@ form.addEventListener('submit', async ev=>{
     const prev=myDoc||{};
     await db.doc('applications/'+uid).set({...d, uid, status:prev.status||'pending', unit:prev.unit||'', note:prev.note||'', submittedAt:prev.submittedAt||Date.now(), updatedAt:Date.now()});
     say(''); showDone(prev.status||'pending');
-  }catch{ say(DISCORD_WEBHOOK?'Could not send your application. Use "Copy for Discord" and paste it in the applications channel.':'Online applications are not connected yet. Use "Copy for Discord" and paste it in the applications channel.',true); }
+  }catch{ say(window.spartansAuth&&spartansAuth.connected?'Could not send your application. Check your internet and try again, or use \"Copy for Discord\".':'Online applications are not connected yet. Use \"Copy for Discord\" and send it to command on Discord.',true); }
   finally{ $('submit').disabled=false; }
 });
 $('edit').addEventListener('click',()=>{ $('done').hidden=true; form.hidden=false; document.querySelector('.progress').hidden=false; });
@@ -1095,5 +1120,16 @@ if(!REDUCE){
   requestAnimationFrame(frame);
 })();
 
+
+/* GitHub version: Google sign-in for the dashboard, no Spartan AI */
+aiPanel=()=>'';
+$('gsign').addEventListener('click',async()=>{
+  const m=$('lockmsg');
+  try{ const u=await spartansAuth.current(); if(u) await spartansAuth.signOut(); await spartansAuth.signIn(); location.reload(); }
+  catch(e){ m.textContent = spartansAuth.connected ? 'Sign-in did not work. Try again, and allow pop-ups for this site.' : 'The dashboard is not connected yet.'; }
+});
+spartansAuth.current().then(u=>{
+  if(u && !isOwner){ $('lockmsg').textContent='Signed in as '+u.email+'. This account is not the commander\'s.'; $('gsign').textContent='Use another account'; }
+});
 </script>
 </body></html>
