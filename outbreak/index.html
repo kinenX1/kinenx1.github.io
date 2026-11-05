@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>OutBreak – online FPS</title>
+<meta name="description" content="OutBreak: free online first-person shooter. Drop in, pick your loadout, fight your friends on Medina, Rinanya and Vice Beach. Android, iPhone and PC.">
+<meta property="og:title" content="OutBreak – online FPS">
+<meta property="og:description" content="Drop in, pick your loadout, fight your friends. Free on phone and PC.">
+<meta property="og:image" content="cover.jpg">
+<meta name="theme-color" content="#090b0c">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Saira+Condensed:wght@500;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root{--bg:#090b0c;--panel:#121513;--line:rgba(236,235,228,.14);--fg:#ecebe4;--mute:#a3a79a;--y:#ffb21a;--r:#ff3b2b;--stencil:"Black Ops One","Saira Condensed",Impact,sans-serif;--body:"Saira Condensed","Arial Narrow",sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--tape:repeating-linear-gradient(-45deg,var(--y) 0 14px,#111 14px 28px);color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:radial-gradient(80% 50% at 50% 0%,rgba(255,178,26,.08),transparent 60%),var(--bg);color:var(--fg)}
+body{font:17px/1.5 var(--body);letter-spacing:.02em;padding:max(22px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 40px max(16px,env(safe-area-inset-left))}
+body::before{content:"";position:fixed;left:0;right:0;top:0;height:7px;background:var(--tape);z-index:2}
+.wrap{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.cover{position:relative;overflow:hidden;border:1px solid var(--line);aspect-ratio:16/9;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
+.cover img{width:100%;height:100%;object-fit:cover;display:block}
+.cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(9,11,12,.95))}
+.logo{position:absolute;left:18px;bottom:14px;z-index:1;display:flex;align-items:center;gap:12px}
+.logo img{width:56px;height:56px}
+.logo b{display:block;font:400 44px var(--stencil);line-height:1;letter-spacing:.03em}
+.logo b span{color:var(--y)}
+.logo small{font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--mute)}
+h1{font:400 20px var(--stencil);letter-spacing:.12em;margin:0;text-align:center;text-transform:uppercase}
+.pick{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:440px){.pick{grid-template-columns:1fr}}
+.btn{padding:18px 14px;color:#120d02;font:400 21px var(--stencil);letter-spacing:.08em;text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:6px;transition:transform .12s,filter .12s;clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
+.btn:hover{filter:brightness(1.1)}.btn:active{transform:scale(.97)}
+.btn:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.btn svg{width:32px;height:32px}
+.btn small{font:600 13px var(--body);letter-spacing:.06em;opacity:.85}
+.mob{background:linear-gradient(180deg,#ffc94a,#f29d08)}.pc{background:linear-gradient(180deg,#e9e7de,#b8b6aa)}
+.play{display:flex;align-items:center;justify-content:center;gap:10px;background:#1b1f1b;color:var(--fg);border:1px solid rgba(255,178,26,.5);padding:14px;font:400 18px var(--stencil);letter-spacing:.1em;text-decoration:none;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.play:hover{border-color:var(--y)}
+.sheet{display:none;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);padding:16px;border-left:4px solid var(--y)}
+.sheet.on{display:flex}
+.sheet h2{margin:0;font:400 14px var(--stencil);letter-spacing:.18em;text-transform:uppercase;color:var(--mute)}
+.opt{display:flex;align-items:center;gap:12px;padding:14px;background:#181c19;border:1px solid var(--line);color:var(--fg);text-decoration:none}
+.opt:hover{border-color:var(--y)}
+.opt b{display:block;font-size:18px}.opt span{font-size:14px;color:var(--mute)}
+.opt i{font-style:normal;font-size:24px;width:32px;text-align:center}
+.notes{background:var(--panel);border:1px solid var(--line);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.notes p{margin:0}
+.notes h2{margin:0;font:400 15px var(--stencil);letter-spacing:.14em;color:var(--y)}
+.feat{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin:0;padding:0;list-style:none}
+.feat li::before{content:"▶ ";color:var(--y);font-size:.8em}
+@media (max-width:440px){.feat{grid-template-columns:1fr}}
+kbd{font:500 12px var(--mono);background:#1d211d;border:1px solid var(--line);padding:1px 6px;color:var(--y)}
+.spec{font:500 12px var(--mono);color:var(--mute);text-align:center;margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="cover">
+    <img src="cover.jpg" alt="Vice Beach: Ocean Drive with palm trees, pastel art deco hotels and a retro sports car">
+    <div class="logo"><img src="icon.png" alt=""><div><b>OUT<span>BREAK</span></b><small>Online FPS · Phone and PC</small></div></div>
+  </div>
+  <a class="play" href="play/">▶ Play now in your browser</a>
+  <h1>Download the app</h1>
+  <div class="pick">
+    <a class="btn mob" href="#mobile" id="bMob">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
+      MOBILE<small>Android · iPhone</small>
+    </a>
+    <a class="btn pc" href="#pc" id="bPc">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      PC<small>Windows · Mac · Linux</small>
+    </a>
+  </div>
+  <div class="sheet" id="mobile">
+    <h2>Mobile</h2>
+    <a class="opt" href="OutBreak.apk" download="OutBreak.apk"><i>🤖</i><div><b>Android app (APK)</b><span>Download it, tap it, allow "Install unknown apps", then Install. The OutBreak icon appears on your home screen.</span></div></a>
+    <a class="opt" href="play/"><i>🍎</i><div><b>iPhone</b><span>Opens the game in Safari. Tap Share ⎙ then "Add to Home Screen" to get the OutBreak icon.</span></div></a>
+  </div>
+  <div class="sheet" id="pc">
+    <h2>PC</h2>
+    <a class="opt" href="play/"><i>▶</i><div><b>Install as an app</b><span>Open the game in Chrome or Edge and click the install icon in the address bar (or "Install app" in the game menu).</span></div></a>
+    <a class="opt" href="OutBreak.html" download="OutBreak.html"><i>⬇</i><div><b>Download OutBreak.html</b><span>Double-click it to play. Needs internet for online matches.</span></div></a>
+  </div>
+  <div class="notes">
+    <h2>What's inside</h2>
+    <ul class="feat">
+      <li>Online quick match and private lobbies with codes</li><li>Accounts, XP, ranks and stats</li>
+      <li>3 maps: Medina, Rinanya, Vice Beach</li><li>27 weapons + gem knives</li>
+      <li>HE, flashbang and smoke grenades</li><li>C4 bomb you can plant and defuse</li>
+      <li>Medkit, bandages and armor plates</li><li>Radar, kill streaks, day / sunset / night</li>
+    </ul>
+    <p><b>PC:</b> <kbd>WASD</kbd> move, mouse aim, <kbd>1</kbd>–<kbd>8</kbd> slots, <kbd>R</kbd> reload, <kbd>G</kbd> grenade, <kbd>7</kbd> C4, <kbd>E</kbd> defuse, <kbd>B</kbd> loadout, <kbd>V</kbd> launcher.</p>
+    <p>Send this page to your friends, then press <b>Create lobby</b> and share the 5-letter code, or all press <b>Quick match</b> on the same map.</p>
+  </div>
+  <p class="spec">OutBreak 1.0 · free</p>
+</div>
+<script>
+(function(){
+  function show(id){ ['mobile','pc'].forEach(function(k){ document.getElementById(k).classList.toggle('on',k===id); }); }
+  function route(){ var h=location.hash.slice(1); if(h==='mobile'||h==='pc') show(h); }
+  window.addEventListener('hashchange',route); route();
+  if(!location.hash){ var m=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent); document.getElementById(m?'bMob':'bPc').style.boxShadow='0 0 0 3px #ffb21a'; }
+})();
+</script>
+</body>
+</html>
