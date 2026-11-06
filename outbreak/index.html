@@ -3,105 +3,203 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>OutBreak – online FPS</title>
-<meta name="description" content="OutBreak: free online first-person shooter. Drop in, pick your loadout, fight your friends on Medina, Rinanya and Vice Beach. Android, iPhone and PC.">
+<title>OutBreak – Download the online FPS</title>
+<meta name="description" content="OutBreak: free online first-person shooter. Drop in, loot, fight your friends on Medina, Rinanya and Vice Beach. Android APK and PC.">
 <meta property="og:title" content="OutBreak – online FPS">
-<meta property="og:description" content="Drop in, pick your loadout, fight your friends. Free on phone and PC.">
-<meta property="og:image" content="cover.jpg">
-<meta name="theme-color" content="#090b0c">
+<meta property="og:description" content="Drop in, loot, fight your friends. Free on Android and PC.">
+<meta property="og:image" content="shot0.jpg">
+<meta name="theme-color" content="#06080a">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Saira+Condensed:wght@500;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Chakra+Petch:wght@500;600;700&display=swap">
 <style>
-:root{--bg:#090b0c;--panel:#121513;--line:rgba(236,235,228,.14);--fg:#ecebe4;--mute:#a3a79a;--y:#ffb21a;--r:#ff3b2b;--stencil:"Black Ops One","Saira Condensed",Impact,sans-serif;--body:"Saira Condensed","Arial Narrow",sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--tape:repeating-linear-gradient(-45deg,var(--y) 0 14px,#111 14px 28px);color-scheme:dark}
+:root{--bg:#06080a;--fg:#f2f1ec;--mute:#9aa0a6;--acc:#ff5a1f;--acc2:#ffb21a;--edge:rgba(255,255,255,.1);--glass:rgba(12,15,18,.72);--h:"Teko",Impact,sans-serif;--b:"Chakra Petch","Arial Narrow",sans-serif;color-scheme:dark}
 *{box-sizing:border-box}
-html,body{margin:0;background:radial-gradient(80% 50% at 50% 0%,rgba(255,178,26,.08),transparent 60%),var(--bg);color:var(--fg)}
-body{font:17px/1.5 var(--body);letter-spacing:.02em;padding:max(22px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 40px max(16px,env(safe-area-inset-left))}
-body::before{content:"";position:fixed;left:0;right:0;top:0;height:7px;background:var(--tape);z-index:2}
-.wrap{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
-.cover{position:relative;overflow:hidden;border:1px solid var(--line);aspect-ratio:16/9;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
-.cover img{width:100%;height:100%;object-fit:cover;display:block}
-.cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(9,11,12,.95))}
-.logo{position:absolute;left:18px;bottom:14px;z-index:1;display:flex;align-items:center;gap:12px}
-.logo img{width:56px;height:56px}
-.logo b{display:block;font:400 44px var(--stencil);line-height:1;letter-spacing:.03em}
-.logo b span{color:var(--y)}
-.logo small{font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--mute)}
-h1{font:400 20px var(--stencil);letter-spacing:.12em;margin:0;text-align:center;text-transform:uppercase}
-.pick{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media (max-width:440px){.pick{grid-template-columns:1fr}}
-.btn{padding:18px 14px;color:#120d02;font:400 21px var(--stencil);letter-spacing:.08em;text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:6px;transition:transform .12s,filter .12s;clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
-.btn:hover{filter:brightness(1.1)}.btn:active{transform:scale(.97)}
-.btn:focus-visible{outline:3px solid #fff;outline-offset:3px}
-.btn svg{width:32px;height:32px}
-.btn small{font:600 13px var(--body);letter-spacing:.06em;opacity:.85}
-.mob{background:linear-gradient(180deg,#ffc94a,#f29d08)}.pc{background:linear-gradient(180deg,#e9e7de,#b8b6aa)}
-.play{display:flex;align-items:center;justify-content:center;gap:10px;background:#1b1f1b;color:var(--fg);border:1px solid rgba(255,178,26,.5);padding:14px;font:400 18px var(--stencil);letter-spacing:.1em;text-decoration:none;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
-.play:hover{border-color:var(--y)}
-.sheet{display:none;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);padding:16px;border-left:4px solid var(--y)}
-.sheet.on{display:flex}
-.sheet h2{margin:0;font:400 14px var(--stencil);letter-spacing:.18em;text-transform:uppercase;color:var(--mute)}
-.opt{display:flex;align-items:center;gap:12px;padding:14px;background:#181c19;border:1px solid var(--line);color:var(--fg);text-decoration:none}
-.opt:hover{border-color:var(--y)}
-.opt b{display:block;font-size:18px}.opt span{font-size:14px;color:var(--mute)}
-.opt i{font-style:normal;font-size:24px;width:32px;text-align:center}
-.notes{background:var(--panel);border:1px solid var(--line);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
-.notes p{margin:0}
-.notes h2{margin:0;font:400 15px var(--stencil);letter-spacing:.14em;color:var(--y)}
-.feat{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin:0;padding:0;list-style:none}
-.feat li::before{content:"▶ ";color:var(--y);font-size:.8em}
-@media (max-width:440px){.feat{grid-template-columns:1fr}}
-kbd{font:500 12px var(--mono);background:#1d211d;border:1px solid var(--line);padding:1px 6px;color:var(--y)}
-.spec{font:500 12px var(--mono);color:var(--mute);text-align:center;margin:0}
+html{scroll-behavior:smooth}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 var(--b);overflow-x:hidden}
+a{color:inherit}
+#fx{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.scan{position:fixed;inset:0;pointer-events:none;z-index:1;background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);mix-blend-mode:overlay}
+main{position:relative;z-index:2}
+/* hero: crossfading map shots with slow zoom */
+.hero{position:relative;min-height:100svh;display:grid;grid-template-columns:minmax(0,1fr);align-items:end;padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 44px max(20px,env(safe-area-inset-left));overflow:hidden}
+.slides{position:absolute;inset:0;z-index:-1}
+.slides img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;animation:slide 24s infinite;transform:scale(1.08)}
+.slides img:nth-child(2){animation-delay:6s}.slides img:nth-child(3){animation-delay:12s}.slides img:nth-child(4){animation-delay:18s}
+@keyframes slide{0%{opacity:0;transform:scale(1.14)}6%{opacity:1}25%{opacity:1}31%{opacity:0;transform:scale(1.02)}100%{opacity:0}}
+.hero::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg,var(--bg) 4%,rgba(6,8,10,.55) 45%,rgba(6,8,10,.35)),linear-gradient(90deg,rgba(6,8,10,.85),transparent 70%)}
+.top{position:absolute;top:max(16px,env(safe-area-inset-top));left:max(20px,env(safe-area-inset-left));right:max(20px,env(safe-area-inset-right));display:flex;align-items:center;gap:12px}
+.top img{width:42px;height:42px}
+.top b{font:600 30px/1 var(--h);white-space:nowrap;letter-spacing:.04em}.top b span{color:var(--acc)}
+.live{margin-left:auto;white-space:nowrap;font:600 12px var(--b);letter-spacing:.2em;text-transform:uppercase;display:flex;align-items:center;gap:8px;background:var(--glass);border:1px solid var(--edge);padding:6px 10px}
+.live i{width:8px;height:8px;border-radius:50%;background:#3dff7a;box-shadow:0 0 0 0 rgba(61,255,122,.7);animation:ping 1.6s infinite}
+@keyframes ping{70%{box-shadow:0 0 0 10px rgba(61,255,122,0)}100%{box-shadow:0 0 0 0 rgba(61,255,122,0)}}
+.wrap{max-width:1100px;margin:0 auto;width:100%}
+.kick{font:600 13px var(--b);letter-spacing:.36em;text-transform:uppercase;color:var(--acc)}
+.kick::before{content:"// "}
+h1{font:700 clamp(64px,17vw,220px)/.78 var(--h);max-width:100%;margin:8px 0 0;letter-spacing:.01em;text-transform:uppercase;position:relative;display:inline-block}
+h1 span{color:var(--acc)}
+h1::before,h1::after{content:attr(data-t);position:absolute;inset:0;opacity:0;pointer-events:none}
+h1::before{color:#3ce8ff;animation:glitch 4.2s infinite steps(1)}h1::after{color:var(--acc);animation:glitch 4.2s .07s infinite steps(1)}
+@keyframes glitch{0%,90%,100%{opacity:0;transform:none;clip-path:none}91%{opacity:.8;transform:translate(-6px,2px);clip-path:inset(20% 0 55% 0)}93%{opacity:.8;transform:translate(5px,-3px);clip-path:inset(60% 0 10% 0)}95%{opacity:0}}
+.sub{font-size:clamp(16px,2.2vw,20px);color:#d4d7da;max-width:560px;margin:10px 0 26px}
+.dl{display:grid;grid-template-columns:repeat(2,minmax(0,300px));gap:12px}
+@media (max-width:620px){.dl{grid-template-columns:1fr}}
+.dbtn{position:relative;overflow:hidden;display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));transition:transform .15s}
+.dbtn:hover{transform:translateY(-3px)}.dbtn:active{transform:scale(.98)}
+.dbtn:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.dbtn::before{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.35) 50%,transparent 65%);transform:translateX(-120%);animation:shine 3.2s infinite}
+@keyframes shine{60%,100%{transform:translateX(120%)}}
+.dbtn svg{width:38px;height:38px;flex-shrink:0}
+.dbtn b{display:block;font:600 30px/0.9 var(--h);letter-spacing:.05em;text-transform:uppercase}
+.dbtn small{font:600 12px var(--b);letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+.and{background:linear-gradient(90deg,var(--acc),#ff7a2a);color:#fff;animation:glow 2.4s ease-in-out infinite}
+.pc{background:rgba(255,255,255,.1);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);backdrop-filter:blur(6px)}
+.pc::before{animation-delay:1.6s}
+@keyframes glow{50%{filter:drop-shadow(0 0 22px rgba(255,90,31,.7))}}
+.dbtn.me{outline:2px solid #fff;outline-offset:3px}
+.playnow{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font:600 22px var(--h);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;color:var(--acc2)}
+.playnow:hover{color:#fff}
+.hint{font-size:13px;color:var(--mute);margin-top:8px}
+.scroll{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font:600 11px var(--b);letter-spacing:.3em;color:var(--mute);animation:bob 1.8s ease-in-out infinite}
+@keyframes bob{50%{transform:translate(-50%,6px)}}
+section{padding:70px max(20px,env(safe-area-inset-left)) 20px}
+h2{font:700 clamp(46px,8vw,84px)/.85 var(--h);text-transform:uppercase;margin:6px 0 24px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
+@media (max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--glass);border:1px solid var(--edge);border-top:3px solid var(--acc);padding:16px}
+.stat b{display:block;font:700 56px/.9 var(--h);color:#fff}.stat span{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--mute)}
+.maps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:760px){.maps{grid-template-columns:1fr}}
+.map{position:relative;aspect-ratio:16/10;overflow:hidden;border:1px solid var(--edge);clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,0 100%)}
+.map img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.map:hover img{transform:scale(1.08)}
+.map::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.85),transparent 55%)}
+.map div{position:absolute;left:14px;bottom:10px;z-index:1}
+.map b{display:block;font:700 40px/.9 var(--h);text-transform:uppercase}.map span{font-size:13px;color:#d4d7da}
+.feat{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:760px){.feat{grid-template-columns:1fr 1fr}}@media (max-width:460px){.feat{grid-template-columns:1fr}}
+.f{background:var(--glass);border:1px solid var(--edge);padding:16px;position:relative;overflow:hidden}
+.f::before{content:"";position:absolute;left:0;top:0;width:3px;height:100%;background:var(--acc);transform:scaleY(0);transform-origin:top;transition:transform .4s}
+.f:hover::before{transform:scaleY(1)}
+.f i{font-style:normal;font-size:26px}
+.f b{display:block;font:600 26px/1 var(--h);letter-spacing:.04em;text-transform:uppercase;margin:6px 0 4px}
+.f p{margin:0;color:var(--mute);font-size:14px}
+.shots{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+.shots img{width:100%;height:100%;object-fit:cover;border:1px solid var(--edge);display:block}
+.shots .col{display:grid;gap:12px}
+@media (max-width:760px){.shots{grid-template-columns:1fr}}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;counter-reset:s}
+@media (max-width:760px){.steps{grid-template-columns:1fr}}
+.step{background:var(--glass);border:1px solid var(--edge);padding:16px;counter-increment:s}
+.step::before{content:"0" counter(s);font:700 44px/1 var(--h);color:var(--acc)}
+.step b{display:block;font:600 22px var(--h);text-transform:uppercase;letter-spacing:.05em}
+.step p{margin:4px 0 0;color:var(--mute);font-size:14px}
+footer{padding:50px 20px 40px;text-align:center;color:var(--mute);font-size:13px;position:relative;z-index:2}
+footer .dl{justify-content:center;margin:0 auto 18px;max-width:620px}
+.rv{opacity:0;transform:translateY(30px);transition:opacity .7s,transform .7s}
+.rv.in{opacity:1;transform:none}
+kbd{font:600 12px ui-monospace,monospace;background:#1a1e22;border:1px solid var(--edge);padding:1px 6px;color:var(--acc2)}
+@media (max-width:480px){.live{font-size:10px;padding:4px 7px}.top b{font-size:24px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}.slides img:first-child{opacity:1}}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="cover">
-    <img src="cover.jpg" alt="Vice Beach: Ocean Drive with palm trees, pastel art deco hotels and a retro sports car">
-    <div class="logo"><img src="icon.png" alt=""><div><b>OUT<span>BREAK</span></b><small>Online FPS · Phone and PC</small></div></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="scan" aria-hidden="true"></div>
+<main>
+<header class="hero">
+  <div class="slides" aria-hidden="true"><img src="shot0.jpg" alt=""><img src="shot1.jpg" alt=""><img src="shot2.jpg" alt=""><img src="shot3.jpg" alt=""></div>
+  <div class="top"><img src="icon.png" alt=""><b>OUT<span>BREAK</span></b><div class="live"><i></i>Servers online</div></div>
+  <div class="wrap">
+    <span class="kick">Free online FPS · Season 01</span>
+    <h1 data-t="OUTBREAK">OUT<span>BREAK</span></h1>
+    <p class="sub">Drop in from the sky, loot crates, grab a supply drop and fight your friends across three maps. Android and PC.</p>
+    <div class="dl">
+      <a class="dbtn and" id="dAnd" href="OutBreak.apk" download="OutBreak.apk"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.2 8.4h9.6v8.1c0 .7-.5 1.2-1.2 1.2h-.9v2.5a1 1 0 0 1-2 0v-2.5h-1.4v2.5a1 1 0 0 1-2 0v-2.5h-.9c-.7 0-1.2-.5-1.2-1.2zM5.3 8.6a1 1 0 0 1 1 1v4.6a1 1 0 0 1-2 0V9.6a1 1 0 0 1 1-1zm13.4 0a1 1 0 0 1 1 1v4.6a1 1 0 0 1-2 0V9.6a1 1 0 0 1 1-1zM15.2 3.4l.9-1.4a.2.2 0 0 0-.3-.2l-.9 1.4A6 6 0 0 0 12 2.6c-.7 0-1.4.2-2 .5l-.8-1.3a.2.2 0 0 0-.3.2l.9 1.4a4.9 4.9 0 0 0-2.6 4.1h9.6a4.9 4.9 0 0 0-2.6-4.1zM9.9 5.9a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm4.2 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1z"/></svg><div><b>Android APK</b><small>Phone · tablet · 25 KB</small></div></a>
+      <a class="dbtn pc" id="dPc" href="#pc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg><div><b>PC</b><small>Windows · Mac · Linux</small></div></a>
+    </div>
+    <a class="playnow" href="play/">▶ Or play now in the browser</a>
+    <div class="hint" id="hint">iPhone: open “Play in browser”, then Share → Add to Home Screen.</div>
   </div>
-  <a class="play" href="play/">▶ Play now in your browser</a>
-  <h1>Download the app</h1>
-  <div class="pick">
-    <a class="btn mob" href="#mobile" id="bMob">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
-      MOBILE<small>Android · iPhone</small>
-    </a>
-    <a class="btn pc" href="#pc" id="bPc">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-      PC<small>Windows · Mac · Linux</small>
-    </a>
+  <span class="scroll" aria-hidden="true">SCROLL ▾</span>
+</header>
+
+<section class="wrap rv">
+  <span class="kick">Loaded</span><h2>The arsenal</h2>
+  <div class="stats"><div class="stat"><b data-n="29">0</b><span>Weapons</span></div><div class="stat"><b data-n="3">0</b><span>Maps</span></div><div class="stat"><b data-n="8">0</b><span>Inventory slots</span></div><div class="stat"><b data-n="11">0</b><span>Ranks to climb</span></div></div>
+</section>
+
+<section class="wrap rv">
+  <span class="kick">Battlegrounds</span><h2>Three maps</h2>
+  <div class="maps">
+    <div class="map"><img src="shot1.jpg" alt="Medina: whitewashed Tunisian streets at sunset"><div><b>Medina</b><span>Tunisian desert town</span></div></div>
+    <div class="map"><img src="shot2.jpg" alt="Rinanya: snowy forest at night with glowing cabins"><div><b>Rinanya</b><span>Snowy French forest</span></div></div>
+    <div class="map"><img src="shot0.jpg" alt="Vice Beach: Ocean Drive with palm trees and pastel hotels"><div><b>Vice Beach</b><span>Neon beach city · huge</span></div></div>
   </div>
-  <div class="sheet" id="mobile">
-    <h2>Mobile</h2>
-    <a class="opt" href="OutBreak.apk" download="OutBreak.apk"><i>🤖</i><div><b>Android app (APK)</b><span>Download it, tap it, allow "Install unknown apps", then Install. The OutBreak icon appears on your home screen.</span></div></a>
-    <a class="opt" href="play/"><i>🍎</i><div><b>iPhone</b><span>Opens the game in Safari. Tap Share ⎙ then "Add to Home Screen" to get the OutBreak icon.</span></div></a>
+</section>
+
+<section class="wrap rv">
+  <span class="kick">Features</span><h2>Built to fight</h2>
+  <div class="feat">
+    <div class="f"><i>🪂</i><b>Supply drops</b><p>A crate lands every 90 s with the Golden AK-47 or the Viper AWP, full armor and ammo.</p></div>
+    <div class="f"><i>📦</i><b>Loot everywhere</b><p>Ammo boxes, med pouches, armor vests, grenades and energy drinks all over the map.</p></div>
+    <div class="f"><i>💣</i><b>C4 bomb</b><p>Plant it with 7, watch the timer, or defuse an enemy bomb with E.</p></div>
+    <div class="f"><i>🔥</i><b>Grenades</b><p>Frag, flashbang, smoke and Molotov, with cinematic explosions.</p></div>
+    <div class="f"><i>💉</i><b>Healing</b><p>Bandages, painkillers, energy drinks, adrenaline and medkits.</p></div>
+    <div class="f"><i>🎖️</i><b>Ranks and daily ops</b><p>Make an account, earn XP, climb from Recruit to Legend.</p></div>
   </div>
-  <div class="sheet" id="pc">
-    <h2>PC</h2>
-    <a class="opt" href="play/"><i>▶</i><div><b>Install as an app</b><span>Open the game in Chrome or Edge and click the install icon in the address bar (or "Install app" in the game menu).</span></div></a>
-    <a class="opt" href="OutBreak.html" download="OutBreak.html"><i>⬇</i><div><b>Download OutBreak.html</b><span>Double-click it to play. Needs internet for online matches.</span></div></a>
+</section>
+
+<section class="wrap rv">
+  <span class="kick">In game</span><h2>Screenshots</h2>
+  <div class="shots"><img src="menu.jpg" alt="OutBreak main menu over the Vice Beach map" loading="lazy"><div class="col"><img src="shot3.jpg" alt="Grenade explosion with fireball and smoke" loading="lazy"><img src="shot4.jpg" alt="Aiming through a red dot sight" loading="lazy"></div></div>
+</section>
+
+<section class="wrap rv" id="pc">
+  <span class="kick">Install</span><h2>Get it on PC</h2>
+  <div class="steps">
+    <div class="step"><b>Open the game</b><p>Click <a href="play/">Play in browser</a> in Chrome or Edge.</p></div>
+    <div class="step"><b>Install it</b><p>Click <b>Install app</b> in the game menu, or the install icon ⊕ in the address bar. OutBreak gets its own window and desktop icon.</p></div>
+    <div class="step"><b>Or download the file</b><p><a href="OutBreak.html" download="OutBreak.html">Download OutBreak.html</a> and double-click it. Online play needs internet.</p></div>
   </div>
-  <div class="notes">
-    <h2>What's inside</h2>
-    <ul class="feat">
-      <li>Online quick match and private lobbies with codes</li><li>Accounts, XP, ranks and stats</li>
-      <li>3 maps: Medina, Rinanya, Vice Beach</li><li>27 weapons + gem knives</li>
-      <li>HE, flashbang and smoke grenades</li><li>C4 bomb you can plant and defuse</li>
-      <li>Medkit, bandages and armor plates</li><li>Radar, kill streaks, day / sunset / night</li>
-    </ul>
-    <p><b>PC:</b> <kbd>WASD</kbd> move, mouse aim, <kbd>1</kbd>–<kbd>8</kbd> slots, <kbd>R</kbd> reload, <kbd>G</kbd> grenade, <kbd>7</kbd> C4, <kbd>E</kbd> defuse, <kbd>B</kbd> loadout, <kbd>V</kbd> launcher.</p>
-    <p>Send this page to your friends, then press <b>Create lobby</b> and share the 5-letter code, or all press <b>Quick match</b> on the same map.</p>
+</section>
+
+<section class="wrap rv">
+  <span class="kick">Android</span><h2>Install the APK</h2>
+  <div class="steps">
+    <div class="step"><b>Download</b><p>Tap <a href="OutBreak.apk" download="OutBreak.apk">Android APK</a> above.</p></div>
+    <div class="step"><b>Allow it</b><p>Open the file. If Android asks, allow “Install unknown apps” for your browser.</p></div>
+    <div class="step"><b>Play</b><p>Tap Install, then open OutBreak from your home screen. It always runs the newest version.</p></div>
   </div>
-  <p class="spec">OutBreak 1.0 · free</p>
-</div>
+</section>
+
+<footer>
+  <div class="dl"><a class="dbtn and" href="OutBreak.apk" download="OutBreak.apk"><div><b>Android APK</b><small>Download</small></div></a><a class="dbtn pc" href="play/"><div><b>Play now</b><small>Browser · PC · iPhone</small></div></a></div>
+  <p>Controls on PC: <kbd>WASD</kbd> move · <kbd>1</kbd>–<kbd>8</kbd> slots · <kbd>G</kbd> grenade · <kbd>E</kbd> loot / defuse · <kbd>T</kbd> quick chat · <kbd>B</kbd> loadout</p>
+  <p>OutBreak · free · made by Kinen</p>
+</footer>
+</main>
 <script>
 (function(){
-  function show(id){ ['mobile','pc'].forEach(function(k){ document.getElementById(k).classList.toggle('on',k===id); }); }
-  function route(){ var h=location.hash.slice(1); if(h==='mobile'||h==='pc') show(h); }
-  window.addEventListener('hashchange',route); route();
-  if(!location.hash){ var m=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent); document.getElementById(m?'bMob':'bPc').style.boxShadow='0 0 0 3px #ffb21a'; }
+  var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // highlight the right download for this device
+  var mob=/Android/i.test(navigator.userAgent),ios=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+  document.getElementById(mob?'dAnd':'dPc').classList.add('me');
+  if(!ios)document.getElementById('hint').textContent=mob?'Android: tap the orange button, then open the file to install.':'PC: click PC for the install steps, or play right now in your browser.';
+  // reveal sections and count up the numbers
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting)return;e.target.classList.add('in');e.target.querySelectorAll('[data-n]').forEach(function(b){var n=+b.dataset.n,t0=performance.now();(function step(t){var k=Math.min(1,(t-t0)/1100);b.textContent=Math.round(n*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(step)})(t0)});io.unobserve(e.target)})},{threshold:.2});
+  document.querySelectorAll('.rv').forEach(function(s){io.observe(s)});
+  // drifting embers and tracers behind everything
+  var c=document.getElementById('fx'),g=c.getContext('2d'),W,H,P=[];
+  function size(){W=c.width=innerWidth*devicePixelRatio;H=c.height=innerHeight*devicePixelRatio}size();addEventListener('resize',size);
+  for(var i=0;i<70;i++)P.push({x:Math.random(),y:Math.random(),v:.0006+Math.random()*.0016,s:.5+Math.random()*2,h:Math.random()<.8?'255,120,40':'60,232,255',a:.2+Math.random()*.6});
+  var tr=[];
+  function frame(){g.clearRect(0,0,W,H);for(var i=0;i<P.length;i++){var p=P[i];p.y-=p.v;p.x+=Math.sin(p.y*12+i)*.0004;if(p.y<-.02){p.y=1.02;p.x=Math.random()}g.fillStyle='rgba('+p.h+','+p.a+')';g.beginPath();g.arc(p.x*W,p.y*H,p.s*devicePixelRatio,0,7);g.fill()}
+    if(Math.random()<.03)tr.push({x:-.1,y:Math.random()*.7,l:1});
+    for(var j=tr.length-1;j>=0;j--){var t=tr[j];t.x+=.05;t.l-=.03;g.strokeStyle='rgba(255,200,120,'+Math.max(0,t.l)*.5+')';g.lineWidth=1.5*devicePixelRatio;g.beginPath();g.moveTo(t.x*W,t.y*H);g.lineTo((t.x-.12)*W,(t.y+.01)*H);g.stroke();if(t.x>1.2)tr.splice(j,1)}
+    requestAnimationFrame(frame)}
+  if(!reduce)frame();
 })();
 </script>
 </body>
