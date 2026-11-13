@@ -118,6 +118,7 @@ function go(v, push = true) {
   $("v-" + v).classList.add("on");
   document.querySelectorAll(".navbar button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
   if (push && stack[stack.length - 1] !== v) stack.push(v);
+  $("nav").classList.toggle("hide", v === "wizard" || v === "detail");
   window.scrollTo(0, 0);
   if (v === "home") renderHome();
   if (v === "recipes") renderRecipes(true);
@@ -134,25 +135,43 @@ window.appBack = function () {
 const okDiet = r => !(halal && r.haram);
 function renderHome() {
   const h = new Date().getHours();
-  $("greet").textContent = h < 11 ? "Sbeh el khir! ☀️" : h < 17 ? "Ahla! 👋" : "Msa el khir! 🌙";
+  $("greet").textContent = h < 11 ? "Sbeh el khir ☀️" : h < 17 ? "Ahla 👋" : "Msa el khir 🌙";
   $("rcount").textContent = ALL.filter(okDiet).length;
   const m = new Date().toISOString().slice(0, 7);
   const mine = history.filter(x => x.date.startsWith(m)), spent = mine.reduce((a, x) => a + x.cost, 0);
-  $("st-month").textContent = fmt(spent);
-  $("st-cooked").textContent = mine.length;
   const bb = $("budget-box");
   if (monthBudget) {
     const p = Math.min(100, spent / monthBudget * 100), left = monthBudget - spent;
-    bb.innerHTML = `<div class="total" style="font-size:15px"><span>💼 Monthly budget</span><button class="link" onclick="setMonthBudget()">${fmt(monthBudget)} ✏️</button></div>
-      <div class="progress" style="margin:8px 0 6px"><i style="width:${p}%;background:${p > 90 ? "var(--red)" : "var(--olive)"}"></i></div>
-      <div class="muted">${left >= 0 ? `${fmt(left)} left this month` : `⚠️ ${fmt(-left)} over budget`}</div>`;
-  } else bb.innerHTML = `<button class="btn ghost" onclick="setMonthBudget()">💼 Set my monthly food budget</button>`;
+    bb.innerHTML = `<div class="meter"><div class="nums"><div><b>${fmt(spent)}</b> <span class="sub">of ${fmt(monthBudget)} this month</span></div><button class="textbtn" onclick="setMonthBudget()">Edit</button></div>
+      <div class="bar"><i style="width:${p}%;${p > 90 ? "background:var(--harissa)" : ""}"></i></div>
+      <div class="sub">${left >= 0 ? `${fmt(left)} left · ${mine.length} meal${mine.length === 1 ? "" : "s"} cooked` : `<span class="hot">${fmt(-left)} over your budget</span>`}</div></div>`;
+  } else bb.innerHTML = `<div class="meter"><div class="nums"><div><b>${fmt(spent)}</b> <span class="sub">spent this month · ${mine.length} meal${mine.length === 1 ? "" : "s"}</span></div></div>
+      <button class="btn line" style="margin-top:12px" onclick="setMonthBudget()">Set a monthly food budget</button></div>`;
+  const Q = [["Under 10 DT", () => { quickFilter = { budget: 10 }; }], ["15 minutes", () => { quickFilter = { quick: 1 }; }], ["Sfax fish", () => { quickFilter = { sfax: 1 }; }], ["Veggie", () => { quickFilter = { veg: 1 }; }], ["Something sweet", () => { quickFilter = { sweet: 1 }; }], ["Use what I have", () => { quickFilter = { have: 1 }; }]];
+  window._Q = Q;
+  $("quick").innerHTML = Q.map(([t], i) => `<button class="chip" onclick="_Q[${i}][1]();showQuick('${t}')">${t}</button>`).join("");
   const meal = h < 11 ? "b" : h < 16 ? "l" : "d";
-  const pool = ALL.filter(r => r.meals.includes(meal) && okDiet(r));
-  const tn = pool.filter(r => r.cuisine === "tn").sort(() => Math.random() - .5).slice(0, 2);
-  const wd = pool.filter(r => r.cuisine !== "tn").sort(() => Math.random() - .5).slice(0, 2);
-  $("home-picks").innerHTML = tn.concat(wd).map(r => card(r, ans.people)).join("");
+  $("picks-title").textContent = { b: "For breakfast", l: "For lunch", d: "For dinner tonight" }[meal];
+  const pool = ALL.filter(r => r.meals.includes(meal) && okDiet(r) && imgOf(r));
+  $("home-picks").innerHTML = pool.sort(() => Math.random() - .5).slice(0, 8).map(r => tile(r, ans.people)).join("");
+  const tnl = RECIPES.filter(r => r.cuisine === "tn" && okDiet(r)).sort((a, b) => (imgOf(b) ? 1 : 0) - (imgOf(a) ? 1 : 0) || Math.random() - .5).slice(0, 10);
+  $("home-tn").innerHTML = tnl.map(r => tile(r, ans.people)).join("");
   updateDot();
+}
+let quickFilter = null;
+function showQuick(title) {
+  const n = ans.people;
+  let list = ALL.filter(okDiet);
+  const f = quickFilter || {};
+  if (f.budget) list = list.filter(r => recipeCost(r, n, true) <= f.budget && r.cat !== "Dessert");
+  if (f.quick) list = list.filter(r => r.time <= 15);
+  if (f.sfax) list = list.filter(r => r.tags.includes("sfax"));
+  if (f.veg) list = list.filter(r => r.diet === "veg" && r.cat !== "Dessert" && !r.tags.includes("sweet"));
+  if (f.sweet) list = list.filter(r => r.tags.includes("sweet"));
+  if (f.have) list = list.filter(r => haveRatio(r) >= .5).sort((a, b) => haveRatio(b) - haveRatio(a));
+  else list.sort((a, b) => (a.world ? 1 : 0) - (b.world ? 1 : 0) || recipeCost(a, n, true) - recipeCost(b, n, true));
+  resList = list; $("res-sum").textContent = `${title} · ${list.length} dishes for ${n} ${n > 1 ? "people" : "person"}`;
+  resShown = 0; $("res-list").innerHTML = list.length ? "" : `<div class="empty"><div class="art">🤷</div><h3>Nothing here yet</h3><p class="sub">Try another quick pick.</p></div>`; moreResults(); go("results");
 }
 function setMonthBudget() {
   const v = prompt("Your monthly food budget (DT):", monthBudget || "");
@@ -165,55 +184,52 @@ function surprise() {
   openRecipe(pool[Math.floor(Math.random() * pool.length)].id);
 }
 
-// ---------- recipe card ----------
-function card(r, n) {
+// ---------- recipe cards ----------
+function metaLine(r, n) {
   const cost = recipeCost(r, n, true), ratio = haveRatio(r);
-  return `<button class="rc" onclick="openRecipe('${r.id}')">
-    ${pic(r, "e")}
-    <div style="flex:1;min-width:0"><div class="t">${esc(r.name)} ${favs.includes(r.id) ? "❤️" : ""}</div><div class="s">${esc(r.sub)}</div>
-    <div class="badges"><span class="b">⏱ ${r.world ? "~" : ""}${r.time < 60 ? r.time + " min" : Math.round(r.time / 6) / 10 + " h"}</span>
-    <span class="b y">💰 ${costLabel(r, cost)} for ${n}</span>
-    ${ratio >= .5 ? `<span class="b g">✅ you have ${Math.round(ratio * 100)}%</span>` : ""}
-    ${r.cuisine === "tn" ? '<span class="b">🇹🇳</span>' : ""}${r.spicy >= 2 ? '<span class="b r">🌶️</span>' : ""}${r.tags.includes("sfax") ? '<span class="b g">⭐ Sfax</span>' : ""}</div></div></button>`;
+  return `<div class="meta"><span class="tag">${costLabel(r, cost)}</span><span>${r.world ? "~" : ""}${r.time < 60 ? r.time + " min" : Math.round(r.time / 6) / 10 + " h"}</span>${r.spicy >= 2 ? '<span class="hot">Spicy</span>' : ""}${ratio >= .5 ? `<span class="have-pill">You have ${Math.round(ratio * 100)}%</span>` : ""}</div>`;
+}
+function card(r, n, rank) {
+  return `<button class="rr" onclick="openRecipe('${r.id}')">${pic(r, "ph")}
+    <div style="flex:1;min-width:0">${rank ? `<div class="rank">${rank}</div>` : ""}<div class="t">${esc(r.name)}${favs.includes(r.id) ? " ❤️" : ""}</div><div class="sub">${esc(r.sub)}${r.cuisine === "tn" ? " 🇹🇳" : ""}</div>${metaLine(r, n)}</div></button>`;
+}
+function tile(r, n) {
+  return `<button class="tc" onclick="openRecipe('${r.id}')">${pic(r, "ph")}<div class="t">${esc(r.name)}</div>${metaLine(r, n)}</button>`;
 }
 
 // ---------- wizard ----------
 let wizStep = 0;
 const PANTRY = ["egg","tomato","onion","pepper","potato","carrot","chicken","beef","mince","fish","tuna","pasta","couscous","rice","bread","cheese","chickpeas","lentils","flour","semolina","milk","butter","garlic","harissa","tpaste","oliveoil","oil","spices","olives","parsley","lemon","merguez","sugar","honey"];
+const opt = (on, click, e, t, small) => `<button class="opt ${on ? "on" : ""}" onclick="${click}"><span class="e">${e}</span><span>${t}${small ? `<small>${small}</small>` : ""}</span></button>`;
 const WIZ = [
-  { q: "What meal is it? 🍽️", render() {
-      const o = [["b","☀️","Breakfast"],["l","🌤️","Lunch"],["d","🌙","Dinner"],["s","🍩","Snack / sweet"]];
-      return `<div class="big-opts">${o.map(([v,e,t]) => `<button class="opt ${ans.meal===v?"on":""}" onclick="ans.meal='${v}';wizNext()"><span class="e">${e}</span>${t}</button>`).join("")}</div>`; } },
-  { q: "How many people? 👨‍👩‍👧‍👦", render() {
-      return `<div class="stepper"><button onclick="ans.people=Math.max(1,ans.people-1);wizRender()">−</button><b>${ans.people}</b><button onclick="ans.people=Math.min(30,ans.people+1);wizRender()">+</button></div>
-      <div class="chips" style="justify-content:center">${[1,2,4,6,8,12].map(n=>`<button class="chip ${ans.people===n?"on":""}" onclick="ans.people=${n};wizRender()">${n}</button>`).join("")}</div>
-      <button class="btn" style="margin-top:24px" onclick="wizNext()">Next →</button>`; } },
-  { q: "What's your budget? 💸", render() {
+  { q: "Which meal?", s: "I'll only show dishes that fit.", render() {
+      return `<div class="opts">${[["b","☀️","Breakfast"],["l","🌤️","Lunch"],["d","🌙","Dinner"],["s","🍩","Snack or sweet"]].map(([v,e,t]) => opt(ans.meal===v, `ans.meal='${v}';wizNext()`, e, t)).join("")}</div>`; } },
+  { q: "How many people?", s: "Quantities and prices scale to this.", next: true, render() {
+      return `<div class="stepper"><button onclick="ans.people=Math.max(1,ans.people-1);wizRender()" aria-label="Fewer">−</button><b>${ans.people}</b><button onclick="ans.people=Math.min(30,ans.people+1);wizRender()" aria-label="More">+</button></div>
+      <div class="chips" style="justify-content:center">${[1,2,4,6,8,12].map(n=>`<button class="chip ${ans.people===n?"on":""}" onclick="ans.people=${n};wizRender()">${n}</button>`).join("")}</div>`; } },
+  { q: "What's your budget?", s: "The most you want to spend on this meal.", next: true, render() {
       const bt = ans.budgetTotal;
-      return `<p class="muted">Type how much you want to spend on this meal for ${ans.people} ${ans.people > 1 ? "people" : "person"}.</p>
-      <div style="display:flex;gap:10px;align-items:center"><input type="number" inputmode="decimal" id="bud" min="0" step="0.5" placeholder="e.g. 20" value="${bt != null ? bt : ""}" style="font-size:24px;font-weight:800;text-align:center" oninput="ans.budgetTotal=this.value?parseFloat(this.value):null;$('bud-pp').textContent=ans.budgetTotal?'= '+fmt(ans.budgetTotal/ans.people)+' per person':''"><b style="font-size:20px">DT</b></div>
-      <div class="muted" id="bud-pp" style="text-align:center;margin:6px 0 12px">${bt ? "= " + fmt(bt / ans.people) + " per person" : ""}</div>
-      <div class="chips" style="justify-content:center">${[5,10,15,20,30,50,80].map(v => `<button class="chip ${bt===v?"on":""}" onclick="ans.budgetTotal=${v};wizRender()">${v} DT</button>`).join("")}
-      <button class="chip ${bt==null?"on":""}" onclick="ans.budgetTotal=null;wizRender()">👑 No limit</button></div>
-      <button class="btn" style="margin-top:24px" onclick="wizNext()">Next →</button>`; } },
-  { q: "How much time do you have? ⏱️", render() {
-      const o = [[15,"⚡","15 min"],[30,"⏱️","30 min"],[60,"🕐","1 hour"],[999,"🍲","No rush"]];
-      return `<div class="big-opts">${o.map(([v,e,t]) => `<button class="opt ${ans.time===v?"on":""}" onclick="ans.time=${v};wizNext()"><span class="e">${e}</span>${t}</button>`).join("")}</div>`; } },
-  { q: "What are you in the mood for? 😋", render() {
-      const o = [["tn","🇹🇳","Tunisian"],["sfax","⭐","Sfax specials"],["intl","🌍","World food"],["any","🤷","Anything"]];
-      return `<div class="big-opts">${o.map(([v,e,t]) => `<button class="opt ${ans.cuisine===v?"on":""}" onclick="ans.cuisine='${v}';${v==="intl"?"wizRender()":"wizNext()"}"><span class="e">${e}</span>${t}</button>`).join("")}</div>
-      ${ans.cuisine === "intl" ? `<div class="lbl">Which country? (optional)</div><select id="area" onchange="ans.area=this.value" style="width:100%;padding:13px;border-radius:14px;border:2px solid var(--line);font:inherit;background:#fff"><option value="">🌍 Any country</option>${AREAS.map(a => `<option ${ans.area===a?"selected":""}>${a}</option>`).join("")}</select><button class="btn" style="margin-top:16px" onclick="wizNext()">Next →</button>` : ""}`; } },
-  { q: "Anything to avoid? 🚫", render() {
-      const o = [["nomeat","🥩 No meat"],["nofish","🐟 No fish"],["mild","🧊 Not spicy"],["healthy","🥗 Healthy please"]];
-      return `<p class="muted">Pick any (or none)</p><div class="chips"><button class="chip ${halal?"on":""}" onclick="halal=!halal;S.set('halal',halal);wizRender()">🕌 No pork / alcohol</button>${o.map(([v,t]) => `<button class="chip ${ans.diet.includes(v)?"on":""}" onclick="toggleDiet('${v}')">${t}</button>`).join("")}</div>
-      <button class="btn" style="margin-top:24px" onclick="wizNext()">Next →</button>`; } },
-  { q: "What do you already have at home? 🧺", render() {
-      return `<p class="muted">Tap what's in your kitchen — I'll pick dishes that use it and won't make you buy it.</p>
-      <div class="chips">${PANTRY.map(k => `<button class="chip ${have.includes(k)?"on":""}" onclick="toggleHave('${k}');wizRender()">${ING[k][4]} ${ING[k][0].replace(/ \(.*\)/,"")}</button>`).join("")}</div>
-      <button class="btn" style="margin-top:24px" onclick="showResults()">🍽️ Show me what to cook</button>`; } }
+      return `<div class="money"><input type="number" inputmode="decimal" id="bud" min="0" step="0.5" placeholder="20" value="${bt != null ? bt : ""}" aria-label="Budget in dinars" oninput="ans.budgetTotal=this.value?parseFloat(this.value):null;$('bud-pp').textContent=ans.budgetTotal?fmt(ans.budgetTotal/ans.people)+' per person':''"><b>DT</b></div>
+      <p class="sub" id="bud-pp" style="margin:8px 4px 16px">${bt ? fmt(bt / ans.people) + " per person" : ""}</p>
+      <div class="chips">${[5,10,15,20,30,50,80].map(v => `<button class="chip ${bt===v?"on":""}" onclick="ans.budgetTotal=${v};wizRender()">${v} DT</button>`).join("")}<button class="chip ${bt==null?"on":""}" onclick="ans.budgetTotal=null;wizRender()">No limit</button></div>`; } },
+  { q: "How much time?", s: "From start to plate.", render() {
+      return `<div class="opts">${[[15,"⚡","15 min","Super quick"],[30,"⏱️","30 min","Easy weeknight"],[60,"🕐","1 hour","Proper cooking"],[999,"🍲","No rush","Slow and tasty"]].map(([v,e,t,sm]) => opt(ans.time===v, `ans.time=${v};wizNext()`, e, t, sm)).join("")}</div>`; } },
+  { q: "What are you craving?", s: "Pick a style of food.", render() {
+      return `<div class="opts">${[["tn","🇹🇳","Tunisian","Couscous, ojja, brik…"],["sfax","🐟","Sfax specials","Fish and the sea"],["intl","🌍","World food","37 countries"],["any","🤷","Anything","Surprise me"]].map(([v,e,t,sm]) => opt(ans.cuisine===v, `ans.cuisine='${v}';${v==="intl"?"wizRender()":"wizNext()"}`, e, t, sm)).join("")}</div>
+      ${ans.cuisine === "intl" ? `<p style="margin:20px 0 8px;font-weight:600">Which country?</p><select class="sel" onchange="ans.area=this.value"><option value="">Any country</option>${AREAS.map(a => `<option ${ans.area===a?"selected":""}>${a}</option>`).join("")}</select>` : ""}`; },
+    get next() { return ans.cuisine === "intl"; } },
+  { q: "Anything to avoid?", s: "Pick as many as you like, or none.", next: true, render() {
+      return `<div class="chips" style="margin-top:18px"><button class="chip ${halal?"on":""}" onclick="halal=!halal;S.set('halal',halal);wizRender()">🕌 No pork or alcohol</button>${[["nomeat","No meat"],["nofish","No fish"],["mild","Not spicy"],["healthy","Healthy"]].map(([v,t]) => `<button class="chip ${ans.diet.includes(v)?"on":""}" onclick="toggleDiet('${v}')">${t}</button>`).join("")}</div>`; } },
+  { q: "What's in your kitchen?", s: "I'll favour dishes that use it and leave it off your list.", next: "Show my dishes", render() {
+      return `<div class="chips" style="margin-top:18px;padding-bottom:110px">${PANTRY.map(k => `<button class="chip ${have.includes(k)?"on":""}" onclick="toggleHave('${k}');wizRender()">${ING[k][4]} ${ING[k][0].replace(/ \(.*\)/,"")}</button>`).join("")}</div>`; } }
 ];
 function startWizard() { wizStep = 0; go("wizard"); wizRender(); }
-function wizRender() { $("wiz-bar").style.width = ((wizStep + 1) / WIZ.length * 100) + "%"; $("wiz-body").innerHTML = `<h2>${WIZ[wizStep].q}</h2><div class="muted" style="margin-bottom:14px">Question ${wizStep + 1} of ${WIZ.length}</div>` + WIZ[wizStep].render(); }
+function wizRender() {
+  const w = WIZ[wizStep];
+  $("wiz-bar").innerHTML = WIZ.map((_, i) => `<i class="${i <= wizStep ? "on" : ""}"></i>`).join("");
+  $("wiz-body").innerHTML = `<p class="sub">Step ${wizStep + 1} of ${WIZ.length}</p><h2>${w.q}</h2><p class="sub" style="margin:0">${w.s}</p>` + w.render() +
+    (w.next ? `<div class="sticky"><button class="btn" onclick="wizNext()">${typeof w.next === "string" ? w.next : "Next"}</button></div>` : "");
+}
 function wizNext() { S.set("ans", ans); if (wizStep < WIZ.length - 1) { wizStep++; wizRender(); window.scrollTo(0, 0); } else showResults(); }
 function wizBack() { if (wizStep > 0) { wizStep--; wizRender(); } else { stack.pop(); go(stack[stack.length - 1] || "home", false); } }
 function toggleDiet(v) { ans.diet = ans.diet.includes(v) ? ans.diet.filter(x => x !== v) : ans.diet.concat(v); wizRender(); }
@@ -236,20 +252,20 @@ function score(r) {
 }
 let resList = [], resShown = 0;
 function showResults() {
-  S.set("ans", ans);
+  S.set("ans", ans); quickFilter = null;
   resList = ALL.map(r => [r, score(r)]).filter(x => x[1] != null).sort((a, b) => b[1] - a[1]).map(x => x[0]);
   let relaxed = false;
   if (!resList.length) { relaxed = true; resList = ALL.filter(r => r.meals.includes(ans.meal) && okDiet(r)).slice(0, 20); }
   const meal = { b: "breakfast", l: "lunch", d: "dinner", s: "a snack" }[ans.meal];
-  $("res-sum").innerHTML = `${meal} · ${ans.people} people · ${ans.budgetTotal != null ? "budget " + fmt(ans.budgetTotal) : "any budget"} · ${ans.time < 999 ? "≤ " + ans.time + " min" : "no rush"} · ${resList.length} matches${relaxed ? "<br>Nothing matched everything, so here's the closest." : ""}`;
+  $("res-sum").innerHTML = `${resList.length} dishes for ${meal}, ${ans.people} ${ans.people > 1 ? "people" : "person"}, ${ans.budgetTotal != null ? fmt(ans.budgetTotal) + " budget" : "any budget"}, ${ans.time < 999 ? "up to " + ans.time + " min" : "no rush"}.${relaxed ? "<br>Nothing matched everything, so here are the closest." : ""}`;
   resShown = 0; $("res-list").innerHTML = ""; moreResults(); go("results");
 }
 function moreResults() {
   const add = resList.slice(resShown, resShown + 10).map((r, j) => {
     const i = resShown + j, warn = [];
-    if (r.time > ans.time) warn.push("takes longer");
-    if (ans.budgetTotal != null && recipeCost(r, ans.people, true) > ans.budgetTotal) warn.push("over your budget");
-    return (i === 0 ? '<div class="lbl">🏆 Best match</div>' : i === 1 ? '<div class="lbl">Other good ideas</div>' : "") + card(r, ans.people) + (warn.length ? `<div class="muted" style="margin:-6px 0 6px 8px">⚠️ ${warn.join(", ")}</div>` : "");
+    if (r.time > ans.time && !quickFilter) warn.push("takes longer");
+    if (ans.budgetTotal != null && !quickFilter && recipeCost(r, ans.people, true) > ans.budgetTotal) warn.push("over your budget");
+    return card(r, ans.people, i === 0 && !quickFilter ? "Best match" : "") + (warn.length ? `<div class="warn">⚠️ ${warn.join(", ")}</div>` : "");
   }).join("");
   $("res-list").insertAdjacentHTML("beforeend", add); resShown += 10;
   $("res-more").style.display = resShown < resList.length ? "flex" : "none";
@@ -261,37 +277,33 @@ function openRecipe(id) { cur = R(id); curN = ans.people || 4; renderDetail(); g
 function ingRows(r, n) {
   if (r.world) {
     const f = n / 4;
-    return r.ingW.map((i, idx) => { const k = ingKey(i), h = have.includes(k);
-      return `<div class="ing ${h ? "have" : ""}" onclick="toggleHave(${JSON.stringify(k).replace(/"/g, "&quot;")});renderDetail()"><div class="ck ${h ? "on" : ""}">${h ? "✓" : ""}</div><div class="n">${i[2] ? ING[i[2]][4] + " " : ""}${esc(i[0])}</div><div class="q">${esc(scaleM(i[1], f))}</div></div>`; }).join("");
+    return r.ingW.map(i => { const k = ingKey(i), h = have.includes(k);
+      return `<div class="ing ${h ? "have" : ""}" role="checkbox" aria-checked="${h}" onclick="toggleHave(${JSON.stringify(k).replace(/"/g, "&quot;")});renderDetail(true)"><div class="ck ${h ? "on" : ""}">${h ? "✓" : ""}</div><div class="n">${esc(i[0])}</div><div class="q">${esc(scaleM(i[1], f))}</div></div>`; }).join("");
   }
-  return r.ing.map(([k, q]) => { const h = have.includes(k); return `<div class="ing ${h ? "have" : ""}" onclick="toggleHave('${k}');renderDetail()">
-    <div class="ck ${h ? "on" : ""}">${h ? "✓" : ""}</div><div class="n">${ING[k][4]} ${ING[k][0]}</div><div class="q">${showQty(k, q * n)}</div><div class="p">${h ? "—" : fmt(buyQty(k, q * n) * price(k))}</div></div>`; }).join("");
+  return r.ing.map(([k, q]) => { const h = have.includes(k); return `<div class="ing ${h ? "have" : ""}" role="checkbox" aria-checked="${h}" onclick="toggleHave('${k}');renderDetail(true)">
+    <div class="ck ${h ? "on" : ""}">${h ? "✓" : ""}</div><div class="n">${ING[k][4]} ${ING[k][0]}</div><div class="q">${showQty(k, q * n)}</div><div class="p">${h ? "have it" : fmt(buyQty(k, q * n) * price(k))}</div></div>`; }).join("");
 }
-function renderDetail() {
-  const r = cur, n = curN, missing = recipeCost(r, n, true), full = recipeCost(r, n, false);
-  const bt = ans.budgetTotal;
-  $("v-detail").innerHTML = `<button class="back" onclick="appBack()">← Back</button>
-  ${pic(r, "detail-hero", true)}
-  <h1 style="margin-top:12px">${esc(r.name)}</h1><div class="muted">${esc(r.sub)}</div>
-  <div class="badges" style="margin-top:8px"><span class="b">⏱ ${r.world ? "~" : ""}${r.time} min</span><span class="b">${r.cuisine === "tn" ? "🇹🇳 Tunisian" : "🌍 " + esc(r.area || "International")}</span>${r.spicy ? `<span class="b r">${"🌶️".repeat(Math.max(1, r.spicy))}</span>` : ""}${r.haram ? '<span class="b r">contains pork/alcohol</span>' : ""}${(r.world ? [] : r.tags).map(t => `<span class="b">#${t}</span>`).join("")}</div>
-  <div class="card"><div class="total"><span>People</span>
-    <div class="stepper" style="margin:0;gap:12px"><button style="width:42px;height:42px;font-size:22px" onclick="curN=Math.max(1,curN-1);renderDetail()">−</button><b style="font-size:28px;min-width:36px">${n}</b><button style="width:42px;height:42px;font-size:22px" onclick="curN=Math.min(30,curN+1);renderDetail()">+</button></div></div>
-    <div class="row" style="margin-top:10px"><div class="stat" style="background:#FFF0D2"><b>${costLabel(r, missing)}</b><span class="muted">to buy</span></div><div class="stat" style="background:#E5F0D8"><b>${costLabel(r, full / n)}</b><span class="muted">per person</span></div></div>
-    ${bt != null ? `<div class="muted" style="margin-top:8px;text-align:center">${missing <= bt ? `✅ Fits your budget of ${fmt(bt)}` : `⚠️ ${fmt(missing - bt)} over your budget of ${fmt(bt)}`}</div>` : ""}
-    ${r.world ? `<div class="muted" style="margin-top:6px;text-align:center">World recipe: cost is a rough estimate.</div>` : ""}
-  </div>
-  <div class="card"><h2>🧺 Ingredients</h2><div class="muted" style="margin:-6px 0 6px">Tick what you already have</div>${ingRows(r, n)}</div>
-  <button class="btn" onclick="addToCart()">🛒 Add missing to shopping list</button>
-  <div class="row" style="margin-top:10px"><button class="btn ghost" onclick="toggleFav()">${favs.includes(r.id) ? "💔 Unsave" : "❤️ Save"}</button><button class="btn ghost" onclick="go('map')">📍 Where to buy</button></div>
-  ${r.yt ? `<button class="btn ghost" style="margin-top:10px" onclick="openExt('https://www.youtube.com/watch?v=${r.yt}')">▶️ Watch the video</button>` : ""}
-  <div class="card"><h2>👩‍🍳 How to cook</h2><ol class="steps">${r.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol></div>
-  <div class="card"><h2>⏲️ Kitchen timer</h2><div class="timer" id="timer">${tfmt(timerLeft)}</div>
-    <div class="chips" style="justify-content:center;margin-top:8px">${[1, 5, 10, 20, 30].map(m => `<button class="chip" onclick="startTimer(${m})">${m} min</button>`).join("")}<button class="chip" onclick="stopTimer()">⏹</button></div></div>
-  <button class="btn green" onclick="cooked()">✅ I cooked it! (add ${costLabel(r, missing)} to my spending)</button>
-  ${r.world ? '<div class="muted" style="text-align:center;margin-top:10px">Recipe & photo: TheMealDB</div>' : ""}
-  <div style="height:10px"></div>`;
+function renderDetail(keepScroll) {
+  const y = window.scrollY;
+  const r = cur, n = curN, missing = recipeCost(r, n, true), full = recipeCost(r, n, false), bt = ans.budgetTotal;
+  $("v-detail").innerHTML = `<div style="position:relative">${pic(r, "ph hero", true)}
+    <div class="hero-btns"><button onclick="appBack()" aria-label="Back">←</button><button onclick="toggleFav()" aria-label="Save">${favs.includes(r.id) ? "❤️" : "🤍"}</button></div></div>
+  <div class="dhead"><p class="sub" style="margin:0 0 4px">${r.cuisine === "tn" ? "🇹🇳 Tunisian" : "🌍 " + esc(r.area || "World")}${r.cat ? " · " + esc(r.cat) : ""}${r.tags.includes("sfax") ? " · Sfax special" : ""}</p>
+    <h1>${esc(r.name)}</h1>${r.world ? "" : `<p class="sub" style="margin:4px 0 0">${esc(r.sub)}</p>`}
+    ${r.haram ? `<p class="hot" style="margin:8px 0 0;font-size:14px">Contains pork or alcohol</p>` : ""}</div>
+  <div class="facts"><div><b>${costLabel(r, missing)}</b><span>to buy</span></div><div><b>${costLabel(r, full / n)}</b><span>per person</span></div><div><b>${r.world ? "~" : ""}${r.time}′</b><span>minutes</span></div></div>
+  <div class="ppl"><span>Cooking for</span><div class="mini"><button onclick="curN=Math.max(1,curN-1);renderDetail(true)" aria-label="Fewer">−</button><b>${n}</b><button onclick="curN=Math.min(30,curN+1);renderDetail(true)" aria-label="More">+</button></div></div>
+  ${bt != null ? `<p class="fit">${missing <= bt ? `<span class="have-pill">✓ Fits your ${fmt(bt)} budget</span>` : `<span class="hot">${fmt(missing - bt)} over your ${fmt(bt)} budget</span>`}${r.world ? `<span class="sub"> · rough estimate</span>` : ""}</p>` : r.world ? `<p class="fit sub">World recipe: the cost is a rough estimate.</p>` : ""}
+  <div class="blk"><div class="sec"><h2>Ingredients</h2><span class="sub">Tap what you have</span></div>${ingRows(r, n)}</div>
+  <div class="blk"><div class="sec"><h2>How to cook</h2>${r.yt ? `<button class="textbtn" onclick="openExt('https://www.youtube.com/watch?v=${r.yt}')">▶ Video</button>` : ""}</div><ol class="steps">${r.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>
+    <div class="timer"><b id="timer">${tfmt(timerLeft)}</b><div class="chips">${[5, 10, 20, 30].map(m => `<button class="chip" onclick="startTimer(${m})">${m} min</button>`).join("")}<button class="chip" onclick="stopTimer()" aria-label="Stop timer">■</button></div></div>
+    <button class="btn line" style="margin-top:14px" onclick="cooked()">I cooked it — add ${costLabel(r, missing)} to this month</button>
+    <button class="btn line" style="margin-top:10px" onclick="mapFilter='all';go('map')">📍 Find shops near me</button>
+    ${r.world ? '<p class="credit">Recipe and photo: TheMealDB</p>' : ""}<div style="height:96px"></div></div>
+  <div class="sticky"><div class="actionbar"><button class="btn" onclick="addToCart()">Add missing to list · ${costLabel(r, missing)}</button></div></div>`;
+  if (keepScroll) window.scrollTo(0, y);
 }
-function toggleFav() { favs = favs.includes(cur.id) ? favs.filter(x => x !== cur.id) : favs.concat(cur.id); S.set("favs", favs); renderDetail(); toast(favs.includes(cur.id) ? "Saved ❤️" : "Removed"); }
+function toggleFav() { favs = favs.includes(cur.id) ? favs.filter(x => x !== cur.id) : favs.concat(cur.id); S.set("favs", favs); renderDetail(true); toast(favs.includes(cur.id) ? "Saved ❤️" : "Removed"); }
 function addToCart() {
   let added = 0;
   if (cur.world) {
@@ -330,8 +342,8 @@ function beep() { try { const c = new (window.AudioContext || window.webkitAudio
 // ---------- recipes browser ----------
 let rf = "all", rArea = "", rList = [], rShown = 0;
 function renderRecipes(reset) {
-  const F = [["all", "All"], ["fav", "❤️ Saved"], ["tn", "🇹🇳 Tunisian"], ["sfax", "⭐ Sfax"], ["intl", "🌍 World"], ["quick", "⚡ Quick"], ["cheap", "💸 Cheap"], ["veg", "🥬 Veggie"], ["sweet", "🍰 Sweet"], ["fish", "🐟 Fish"]];
-  $("rfilters").innerHTML = `<button class="chip ${halal ? "on" : ""}" onclick="halal=!halal;S.set('halal',halal);renderRecipes(true)">🕌 No pork/alcohol</button>` + F.map(([v, t]) => `<button class="chip ${rf === v ? "on" : ""}" onclick="rf='${v}';renderRecipes(true)">${t}</button>`).join("");
+  const F = [["all", "All"], ["fav", "Saved"], ["tn", "🇹🇳 Tunisian"], ["sfax", "Sfax"], ["intl", "World"], ["quick", "Quick"], ["cheap", "Cheap"], ["veg", "Veggie"], ["fish", "Fish"], ["sweet", "Sweet"]];
+  $("rfilters").innerHTML = F.map(([v, t]) => `<button class="chip ${rf === v ? "on" : ""}" onclick="rf='${v}';renderRecipes(true)">${t}</button>`).join("") + `<button class="chip ${halal ? "on" : ""}" onclick="halal=!halal;S.set('halal',halal);renderRecipes(true)">🕌 No pork or alcohol</button>`;
   if ($("rarea").options.length <= 1) $("rarea").insertAdjacentHTML("beforeend", AREAS.map(a => `<option>${a}</option>`).join(""));
   const q = ($("q").value || "").toLowerCase().trim();
   rList = ALL.filter(r => {
@@ -347,47 +359,50 @@ function renderRecipes(reset) {
     return true;
   });
   if (!q && rf === "all" && !rArea) rList.sort((a, b) => (a.cuisine === "tn" ? 0 : 1) - (b.cuisine === "tn" ? 0 : 1));
-  $("rcount2").textContent = rList.length + " recipes";
-  rShown = 0; $("rlist").innerHTML = rList.length ? "" : `<div class="empty"><div class="e">🤷</div>Nothing found</div>`; moreRecipes();
+  $("rcount2").textContent = rList.length + (rList.length === 1 ? " recipe" : " recipes");
+  rShown = 0;
+  $("rlist").innerHTML = rList.length ? "" : `<div class="empty" style="grid-column:1/-1"><div class="art">🔎</div><h3>No recipes found</h3><p class="sub">Try another word or remove a filter.</p></div>`;
+  moreRecipes();
 }
 function moreRecipes() {
-  $("rlist").insertAdjacentHTML("beforeend", rList.slice(rShown, rShown + 25).map(r => card(r, ans.people)).join(""));
-  rShown += 25; $("r-more").style.display = rShown < rList.length ? "flex" : "none";
+  $("rlist").insertAdjacentHTML("beforeend", rList.slice(rShown, rShown + 24).map(r => tile(r, ans.people)).join(""));
+  rShown += 24; $("r-more").style.display = rShown < rList.length ? "flex" : "none";
 }
 
 // ---------- shopping list ----------
 function updateDot() { const n = Object.values(cart).filter(x => !x.done).length + Object.values(cartX).filter(x => !x.done).length; const d = $("cart-dot"); d.style.display = n ? "block" : "none"; d.textContent = n; }
 function renderList() {
   const keys = Object.keys(cart), xk = Object.keys(cartX);
-  if (!keys.length && !xk.length) { $("list-body").innerHTML = `<div class="empty"><div class="e">🛒</div>Your list is empty.<br>Open a recipe and tap "Add missing to shopping list".</div><button class="btn" onclick="startWizard()">🎯 Find something to cook</button>`; updateDot(); return; }
-  let total = 0, left = 0, noPrice = 0, html = `<div class="muted">For: ${esc(cartRecipes.join(", "))}</div>`;
+  if (!keys.length && !xk.length) { $("list-body").innerHTML = `<div class="empty"><div class="art">🧺</div><h3>Your list is empty</h3><p class="sub">Open a recipe and tap "Add missing to list". Items are grouped by shop.</p></div><button class="btn" onclick="startWizard()">Find my dish</button>`; updateDot(); return; }
+  let total = 0, left = 0, noPrice = 0, body = "";
   Object.keys(SHOPS).forEach(sk => {
     const items = keys.filter(k => ING[k][3] === sk), xitems = xk.filter(k => cartX[k].shop === sk);
     if (!items.length && !xitems.length) return;
-    html += `<div class="shopgrp"><h3><span>${SHOPS[sk].emoji} ${SHOPS[sk].name}</span><button class="link" onclick="mapFilter='${sk}';go('map')">📍 nearby</button></h3><div class="card" style="margin:4px 0">`;
+    body += `<div class="shop"><h3><span>${SHOPS[sk].emoji} ${SHOPS[sk].name}</span><button class="textbtn" onclick="mapFilter='${sk}';go('map')">Nearby</button></h3>`;
     items.forEach(k => {
       const it = cart[k], bq = buyQty(k, it.q), c = bq * price(k); total += c; if (!it.done) left += c;
-      html += `<div class="ing ${it.done ? "have" : ""}"><div class="ck ${it.done ? "on" : ""}" onclick="cart['${k}'].done=!cart['${k}'].done;saveCart()">${it.done ? "✓" : ""}</div>
-        <div class="n" onclick="cart['${k}'].done=!cart['${k}'].done;saveCart()">${ING[k][4]} ${ING[k][0]}<div class="muted">${showQty(k, bq)}</div></div>
-        <button class="p link" onclick="editPrice('${k}')">${fmt(c)} ✏️</button><button onclick="delete cart['${k}'];saveCart()" style="padding:4px 6px">✕</button></div>`;
+      body += `<div class="ing ${it.done ? "have" : ""}"><div class="ck ${it.done ? "on" : ""}" onclick="cart['${k}'].done=!cart['${k}'].done;saveCart()">${it.done ? "✓" : ""}</div>
+        <div class="n" onclick="cart['${k}'].done=!cart['${k}'].done;saveCart()">${ING[k][0]}<div class="sub">${showQty(k, bq)}</div></div>
+        <button class="tag" onclick="editPrice('${k}')" aria-label="Edit price">${fmt(c)}</button><button class="x" onclick="delete cart['${k}'];saveCart()" aria-label="Remove">✕</button></div>`;
     });
     xitems.forEach(k => {
       const it = cartX[k], kk = JSON.stringify(k).replace(/"/g, "&quot;");
       if (it.price != null) { total += it.price; if (!it.done) left += it.price; } else if (!it.done) noPrice++;
-      html += `<div class="ing ${it.done ? "have" : ""}"><div class="ck ${it.done ? "on" : ""}" onclick="cartX[${kk}].done=!cartX[${kk}].done;saveCart()">${it.done ? "✓" : ""}</div>
-        <div class="n" onclick="cartX[${kk}].done=!cartX[${kk}].done;saveCart()">${esc(it.name)}<div class="muted">${esc(it.q.join(" + "))}</div></div>
-        <button class="p link" onclick="editPriceX(${kk})">${it.price != null ? fmt(it.price) : "add price"} ✏️</button><button onclick="delete cartX[${kk}];saveCart()" style="padding:4px 6px">✕</button></div>`;
+      body += `<div class="ing ${it.done ? "have" : ""}"><div class="ck ${it.done ? "on" : ""}" onclick="cartX[${kk}].done=!cartX[${kk}].done;saveCart()">${it.done ? "✓" : ""}</div>
+        <div class="n" onclick="cartX[${kk}].done=!cartX[${kk}].done;saveCart()">${esc(it.name)}<div class="sub">${esc(it.q.join(" + "))}</div></div>
+        <button class="${it.price != null ? "tag" : "textbtn"}" onclick="editPriceX(${kk})">${it.price != null ? fmt(it.price) : "Add price"}</button><button class="x" onclick="delete cartX[${kk}];saveCart()" aria-label="Remove">✕</button></div>`;
     });
-    html += `</div></div>`;
+    body += `</div>`;
   });
   const bt = ans.budgetTotal;
-  html += `<div class="card"><div class="total"><span>Total</span><span>${fmt(total)}</span></div><div class="total" style="font-size:15px;color:var(--mute);margin-top:6px"><span>Still to buy</span><span>${fmt(left)}</span></div>
-    ${noPrice ? `<div class="muted" style="margin-top:6px">+ ${noPrice} item${noPrice > 1 ? "s" : ""} without a price yet</div>` : ""}
-    ${bt != null ? `<div style="margin-top:8px;font-weight:700">${left <= bt ? "✅" : "⚠️"} Your meal budget: ${fmt(bt)}</div>` : ""}
-    <div class="muted" style="margin-top:8px">Prices are based on Sfax market reports (Nov 2026) and change often. Tap ✏️ to put the real price you paid — the app remembers it.</div></div>
-    <button class="btn green" onclick="shareList()">📤 Send list on WhatsApp</button>
-    <button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Clear the whole list?')){cart={};cartX={};cartRecipes=[];saveCart()}">🗑️ Clear list</button>`;
-  $("list-body").innerHTML = html; updateDot();
+  $("list-body").innerHTML = `<p class="sub" style="margin:0">For ${esc(cartRecipes.join(", "))}</p>
+    <div class="sum"><div class="l"><span>Still to buy</span><b>${fmt(left)}</b></div>
+    <div class="sub">Total ${fmt(total)}${noPrice ? ` · ${noPrice} item${noPrice > 1 ? "s" : ""} without a price` : ""}${bt != null ? ` · ${left <= bt ? "fits" : "over"} your ${fmt(bt)} budget` : ""}</div></div>
+    ${body}
+    <p class="sub" style="margin:16px 0">Prices come from Sfax market reports (Nov 2026) and change often. Tap a price to enter what you really paid; the app remembers it.</p>
+    <button class="btn ok" onclick="shareList()">Send list on WhatsApp</button>
+    <button class="btn line" style="margin-top:10px" onclick="if(confirm('Clear the whole list?')){cart={};cartX={};cartRecipes=[];saveCart()}">Clear list</button>`;
+  updateDot();
 }
 function saveCart(quiet) { S.set("cart", cart); S.set("cartX", cartX); S.set("cartRecipes", cartRecipes); if (!quiet) renderList(); else updateDot(); }
 function askNum(msg, d) { const v = prompt(msg, d == null ? "" : d); if (v == null) return undefined; const n = parseFloat(String(v).replace(",", ".")); return isNaN(n) || n < 0 ? undefined : n; }
@@ -417,7 +432,7 @@ function initMap() {
   const term = MAPQ[mapFilter];
   const src = `https://maps.google.com/maps?q=${encodeURIComponent(term)}&ll=${center[0].toFixed(5)},${center[1].toFixed(5)}&z=15&hl=fr&output=embed`;
   if ($("gmap").getAttribute("src") !== src) $("gmap").setAttribute("src", src);
-  $("map-status").textContent = navigator.onLine === false ? "📶 You're offline — the map needs internet." : `Showing "${term}" ${located ? "near you" : "in Sfax"}. Tap a pin for details, or open the Google Maps app for directions.`;
+  $("map-status").textContent = navigator.onLine === false ? "You're offline. The map needs internet." : `Showing ${F.find(x => x[0] === mapFilter)[1].replace(/^\S+\s/, "").toLowerCase()} ${located ? "near you" : "in Sfax"}. Tap a pin for details.`;
   if (!located && !initMap._tried) { initMap._tried = true; locateMe(true); }
 }
 function centerSfax() { center = SFAX; located = false; initMap(); }
@@ -456,12 +471,12 @@ function findRecipes(text) {
 function aiRender(extra) {
   $("ai-out").innerHTML = aiHist.slice(-6).map(m => m.role === "user" ? `<div class="bub me">${esc(m.content)}</div>`
     : `<div class="bub bot">${esc(m.content).replace(/\[\[([^\]]+)\]\]/g, "<b>$1</b>").replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>").replace(/^#{1,4}\s*/gm, "").replace(/ {2,}\n/g, "\n")}</div>` + (m.recipes || []).map(id => card(R(id), ans.people)).join("")).join("") + (extra || "")
-    + (aiHist.length ? `<div style="text-align:right"><button class="link" onclick="aiHist=[];aiRender()">✕ clear chat</button></div>` : "");
+    + (aiHist.length ? `<div style="text-align:right"><button class="textbtn" onclick="aiHist=[];aiRender()">Clear chat</button></div>` : "");
 }
 async function askAI() {
   const inp = $("ai-in"), q = inp.value.trim(); if (!q) return;
   inp.value = ""; aiHist.push({ role: "user", content: q });
-  aiRender(`<div class="bub bot typing">Chef AI is thinking… 🍳</div>`);
+  aiRender(`<div class="bub bot typing">The chef is thinking…</div>`);
   let reply = null;
   for (let attempt = 0; attempt < 2 && !reply; attempt++) {
     try {
