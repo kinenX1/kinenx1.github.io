@@ -2212,7 +2212,7 @@ function mapPick(e){if(state!=='pick')return;const r=mapCv.getBoundingClientRect
 mapCv.addEventListener('pointerdown',mapPick);
 function setMap(id){if(MAP&&MAP.id===id)return;let fresh=false;if(!MAPS[id]){const oh=HALF;HALF=id==='vice'?140:90;MAPS[id]=id==='rinanya'?buildRinanya():id==='vice'?buildVice():buildMedina();HALF=oh;fresh=true}const C=MAPS[id];
   if(!C.dummies.length)C.zones.forEach(zn=>{for(let i=0;i<(id==='medina'?3:2);i++)makeDummy(C,zn)});
-  if(fresh)envTune(C.G);
+  if(fresh){envTune(C.G);mergePrep(C)}
   if(MAP)MAP.G.visible=false;MAP=C;HALF=C.half||90;C.G.visible=true;solids=C.solids;mapShoot=C.shoot;props=C.props;ZONES=C.zones;dummies=C.dummies;
   applyLook(todLook(C));setParticles(C.look.particles);curMap=id;store.set('bd.map',id);renderMapChoice()}
 async function ensureMap(id){if(!MAP_IDS.includes(id))id='medina';if(MAP&&MAP.id===id)return;if(!MAPS[id]){$('loadingTxt').textContent='Building '+MAP_NAMES[id]+'…';show('loading',true);await new Promise(r=>setTimeout(r,80))}setMap(id);show('loading',false)}
@@ -3319,6 +3319,36 @@ function gunFeel(dt,w,ads){KS.t+=dt;SFX.env(dt);cycleStep(dt);magDropUpdate(dt);
   if(w.type==='gun'&&w.muzzle&&KS.heat>.3&&performance.now()-(P.lastShot||0)>140&&gunRoot.visible){KS.smokeT-=dt;if(KS.smokeT<=0){KS.smokeT=.07;w.muzzle.getWorldPosition(_fv);puff(_fv.clone(),new THREE.Vector3((Math.random()-.5)*.08,.3+Math.random()*.15,(Math.random()-.5)*.08),{col:0xc9c9c9,life:1.1,s0:.03,s1:.3,a:KS.heat*.2})}}}
 const vm0=vm;vm=function(def){const d=vm0(def);magSetup(d);return d};
 
+/* ================= V12: merge still map objects into few big meshes (fewer draw calls = less lag) ================= */
+const MG={on:!(window.__BD_TEST&&localStorage.getItem("ob.nomerge")),stats:null};
+function mergePrep(C){if(!MG.on||C.mergeSnap||C.mergedDone)return;const skip=new Set();for(const d of C.dummies)d.g.traverse(o=>skip.add(o));
+  C.G.updateMatrixWorld(true);const snap=new Map();C.G.traverse(o=>{if(o.isMesh)snap.set(o,o.matrixWorld.clone())});C.mergeSnap=snap;C.mergeSkip=skip;C.mergeT=1.5}
+const _mgv=new THREE.Vector3(),_mgn=new THREE.Vector3(),_mgM=new THREE.Matrix4(),_mgN=new THREE.Matrix3(),_mgI=new THREE.Matrix4();
+function mergeTick(dt){const C=MAP;if(!C||!C.mergeSnap||C.mergedDone)return;C.mergeT-=dt;if(C.mergeT>0)return;C.mergedDone=true;
+  C.G.updateMatrixWorld(true);_mgI.copy(C.G.matrixWorld).invert();const groups=new Map();let cand=0;
+  for(const[o,m]of C.mergeSnap){if(C.mergeSkip.has(o)||!o.parent||o.children.length||!o.matrixWorld.equals(m)||Array.isArray(o.material)||o.isInstancedMesh||o.isSkinnedMesh||o.morphTargetInfluences)continue;
+    if(Object.keys(o.userData).length)continue;let vis=true;for(let p=o;p&&p!==C.G;p=p.parent)if(!p.visible){vis=false;break}if(!vis)continue;
+    const g=o.geometry;if(!g||!g.attributes.position||g.morphAttributes&&Object.keys(g.morphAttributes).length)continue;
+    const names=Object.keys(g.attributes).sort();if(names.some(n=>!['position','normal','uv','uv2','color'].includes(n))||!names.includes('normal'))continue;
+    const sig=names.map(n=>n+g.attributes[n].itemSize).join(',');o.getWorldPosition(_mgv);
+    const key=o.material.uuid+'|'+sig+'|'+(o.castShadow?1:0)+(o.receiveShadow?1:0)+'|'+o.renderOrder+'|'+Math.floor(_mgv.x/40)+','+Math.floor(_mgv.z/40);
+    let L=groups.get(key);if(!L)groups.set(key,L=[]);L.push(o);cand++}
+  let made=0,gone=0;
+  for(const L of groups.values()){if(L.length<2)continue;const g0=L[0].geometry,names=Object.keys(g0.attributes);let nv=0,ni=0;
+    for(const o of L){const g=o.geometry;nv+=g.attributes.position.count;ni+=g.index?g.index.count:g.attributes.position.count}
+    const A={};for(const n of names)A[n]=new Float32Array(nv*g0.attributes[n].itemSize);const idx=new Uint32Array(ni);let vo=0,io=0;
+    for(const o of L){const g=o.geometry,cnt=g.attributes.position.count;_mgM.multiplyMatrices(_mgI,o.matrixWorld);_mgN.getNormalMatrix(_mgM);const flip=_mgM.determinant()<0;
+      const P=g.attributes.position,N=g.attributes.normal;
+      for(let i=0;i<cnt;i++){_mgv.set(P.getX(i),P.getY(i),P.getZ(i)).applyMatrix4(_mgM);A.position[(vo+i)*3]=_mgv.x;A.position[(vo+i)*3+1]=_mgv.y;A.position[(vo+i)*3+2]=_mgv.z;
+        _mgn.set(N.getX(i),N.getY(i),N.getZ(i)).applyMatrix3(_mgN).normalize();A.normal[(vo+i)*3]=_mgn.x;A.normal[(vo+i)*3+1]=_mgn.y;A.normal[(vo+i)*3+2]=_mgn.z}
+      for(const n of names){if(n==='position'||n==='normal')continue;const s=g.attributes[n],k=s.itemSize,dst=A[n];for(let i=0;i<cnt;i++){dst[(vo+i)*k]=s.getX(i);if(k>1)dst[(vo+i)*k+1]=s.getY(i);if(k>2)dst[(vo+i)*k+2]=s.getZ(i);if(k>3)dst[(vo+i)*k+3]=s.getW(i)}}
+      const ix=g.index,m=ix?ix.count:cnt;for(let t=0;t<m;t+=3){const a=ix?ix.getX(t):t,b=ix?ix.getX(t+1):t+1,c=ix?ix.getX(t+2):t+2;idx[io++]=vo+a;idx[io++]=vo+(flip?c:b);idx[io++]=vo+(flip?b:c)}
+      vo+=cnt}
+    const geo=new THREE.BufferGeometry();for(const n of names)geo.setAttribute(n,new THREE.BufferAttribute(A[n],g0.attributes[n].itemSize));geo.setIndex(new THREE.BufferAttribute(idx,1));geo.computeBoundingSphere();geo.computeBoundingBox();
+    const mm=new THREE.Mesh(geo,L[0].material);mm.castShadow=L[0].castShadow;mm.receiveShadow=L[0].receiveShadow;mm.renderOrder=L[0].renderOrder;mm.matrixAutoUpdate=false;mm.userData.merged=1;C.G.add(mm);made++;
+    for(const o of L){o.parent.remove(o);gone++}}
+  C.mergeSnap=null;C.mergeSkip=null;MG.stats={cand,made,gone}}
+
 /* ---------- post-processing: HDR -> bloom -> AO + filmic grade -> FXAA ---------- */
 const QNAMES=['Low','Medium','High','Ultra'];
 let qual=store.get('ob.q4',isTouch?1:2),pipe=null,NOPIPE=false,ADAPT=1;if(!(qual>=0&&qual<=3))qual=isTouch?1:2;
@@ -3371,9 +3401,15 @@ void main(){vec3 c=texture2D(tDiffuse,vUv).rgb;vec3 n=texture2D(tDiffuse,vUv+vec
     return {rt,ldr,ldr2,aort,ao,sharp,bloom,grade,fxaa:new THREE.FullScreenQuad(fx)}}catch(e){return null}}
 const PIPE=setupPipe();
 let fxHurt=0,fxHeal=0;
+let PR0=1;const DRS={s:1,acc:0,n:0,slow:0,fast:0,t:0,sh:0};
+/* automatic resolution: lower sharpness when the device can't keep up, raise it again when it can */
+function drsTick(dt){if(state!=='play'&&state!=='drop'){DRS.acc=0;DRS.n=0;DRS.t=0;return}DRS.acc+=Math.min(dt,.1);DRS.n++;DRS.t+=dt;if(DRS.t<1)return;const avg=DRS.acc/DRS.n;DRS.acc=0;DRS.n=0;DRS.t=0;
+  if(avg>1/42){DRS.slow++;DRS.fast=0}else if(avg<1/56){DRS.fast++;DRS.slow=0}else{DRS.slow=0;DRS.fast=0}
+  let ns=DRS.s;if(DRS.slow>=2&&DRS.s>.55){ns=Math.max(.55,DRS.s-.12);DRS.slow=0}else if(DRS.fast>=4&&DRS.s<1){ns=Math.min(1,DRS.s+.1);DRS.fast=0}
+  if(ns!==DRS.s){DRS.s=ns;renderer.setPixelRatio(PR0*ns);resize()}}
 function applyQuality(){if((!PIPE||NOPIPE)&&qual>0)qual=0;pipe=qual>0?PIPE:null;
   renderer.toneMapping=pipe?THREE.NoToneMapping:THREE.ACESFilmicToneMapping;
-  const pr=Math.min(devicePixelRatio,qual===3?2:qual===2?(isTouch?1.5:2):qual===1?(isTouch?1.25:1.5):1);renderer.setPixelRatio(pr);
+  PR0=Math.min(devicePixelRatio,qual===3?2:qual===2?(isTouch?1.5:2):qual===1?(isTouch?1.25:1.5):1);DRS.s=1;DRS.slow=0;DRS.fast=0;renderer.setPixelRatio(PR0);
   const sm=qual===3||qual===2&&!isTouch?4096:qual===0?1024:2048;if(sun.shadow.mapSize.x!==sm){sun.shadow.mapSize.set(sm,sm);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}}
   sun.shadow.radius=qual===0?1:qual===3?3.5:2.5;
   scene.traverse(o=>{if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.needsUpdate=true)}});
@@ -3382,6 +3418,7 @@ function cycleQuality(){qual=(qual+1)%4;applyQuality()}
 for(const host of[$('pauseOv'),$('menu').querySelector('.mModes')]){const b=el('button','btn ghost qBtn');b.type='button';b.addEventListener('click',cycleQuality);host.insertBefore(b,host===$('pauseOv')?$('quitBtn'):null)}
 const _sv=new THREE.Vector3(),_sd=new THREE.Vector3();
 function renderFrame(dt){
+  mergeTick(dt);drsTick(dt);renderer.shadowMap.autoUpdate=false;DRS.sh=(DRS.sh+1)%(qual<=1?2:1);if(DRS.sh===0)renderer.shadowMap.needsUpdate=true;
   skyMat.uniforms.time.value+=dt;
   if(!pipe){ADAPT+=((1+SFX.indoor*.38)-ADAPT)*Math.min(1,dt*1.6);renderer.toneMappingExposure=LOOK.exposure*.92*ADAPT;renderer.setRenderTarget(null);renderer.render(scene,camera);return}
   const P_=pipe;renderer.setRenderTarget(P_.rt);renderer.clear();renderer.render(scene,camera);
@@ -3416,7 +3453,7 @@ const MAPDESC={medina:['Medina','Tunisian desert town · narrow souk alleys, roo
 function heroMap(){const d=MAPDESC[curMap]||MAPDESC.medina;$('mHeroMap').textContent=d[0];$('mHeroTag').textContent=d[1]}heroMap();
 $('mapPick').addEventListener('click',()=>setTimeout(heroMap,0));
 if('serviceWorker' in navigator&&/github\.io$/.test(location.hostname))navigator.serviceWorker.register('sw.js').catch(()=>{});
-if(window.__BD_TEST){window.__bdSfx=r=>{const o=JSON.stringify(SFX.n);if(r)SFX.reset();return o};window.__bdSim=s=>{for(let t=0;t<s;t+=1/30){update(1/30);opsUpdate(1/30)}};window.__bdShoot=()=>{if(P.reloading>0||CYC.on)return;shoot()};window.__bdAmmo=(a,r)=>{const ws=WS[WEAP[cur].id];ws.ammo=a;ws.reserve=r;updateAmmo()};window.__bdReload=()=>reload();window.__bdRemoteShot=(id,d,p)=>SFX.shot(CAT[id],{dist:d,pan:p});window.__bdNoAudio=()=>{SFX.kill();actx=null};window.__bdRl=()=>{const w=WEAP[cur],ws=WS[w.id];return JSON.stringify({on:RL.on,type:RL.type,empty:RL.empty,T:RL.T,ammo:ws.ammo,reserve:ws.reserve,magOff:w.magG?w.magBase.y-w.magG.position.y:0,cyc:CYC.on})};window.__bdRemoteTest=()=>{const r={pos:new THREE.Vector3(P.pos.x+12,P.pos.y,P.pos.z),yaw:Math.PI/2,pitch:0,data:{al:1,mv:1}};remoteShot(r,CAT.ak47,12);const g=NET.game;NET.game=g||{};NET.peers.set('__t',r);remoteSteps(.5);NET.peers.delete('__t');NET.game=g;return JSON.stringify(SFX.n)};window.__bdQ=(q,np)=>{NOPIPE=!!np;qual=q;applyQuality();return QNAMES[qual]};window.__bdAds=v=>{P.ads=v};window.__bdBoom=(k,d)=>{const p=camera.position.clone().addScaledVector(camera.getWorldDirection(new THREE.Vector3()),d||12);p.y=MAP.heightAt(p.x,p.z)+.2;explode(k,p,true)};window.__bdW=i=>selectW(i,true);window.__bdSet=(p,s)=>{LOAD.p=p;if(s)LOAD.s=s;applyLoadout()};window.__bdPrep=()=>{prepT=0};window.__bdLoot=()=>{const l=LOOT[0];P.pos.set(l.p.x+2.2,l.p.y+.05,l.p.z);P.yaw=Math.atan2(2.2,0);P.pitch=-.35;return LOOT.length};window.__bdDrop=()=>{const D=spawnDrop(0);D.p.set(P.pos.x-Math.sin(P.yaw)*7,D.gy+9,P.pos.z-Math.cos(P.yaw)*7);D.gy=groundAt(D.p.x,D.p.z,60);D.p.y=D.gy+9};window.__bdMolly=()=>{const p=camera.position.clone().addScaledVector(camera.getWorldDirection(new THREE.Vector3()),9);p.y=MAP.heightAt(p.x,p.z)+.1;explode('molly',p,true)};window.__bdFire=v=>{fireHeld=v};window.__bdBombs=()=>JSON.stringify({n:BOMBS.length,w:WEAP[cur].id,prepT,g:P.onGround,st:state,fh:fireHeld,lo:loadOpen,p:paused,sw:swapT,u:useT});window.__bdStep=s=>{for(let i=0;i<s/.033;i++){boomUpdate(.033);opsUpdate(.033)}};window.__bdHurt=()=>hurt(50,'Test');window.__bdShadow=v=>{sun.castShadow=v};window.__bdBias=(b,nb)=>{sun.shadow.bias=b;sun.shadow.normalBias=nb};window.__bdNS=(n,v,drop)=>{MAP.G.traverse(o=>{if(o.material&&o.material.name===n){if(drop){o.material.normalMap=null;o.material.needsUpdate=true}else o.material.normalScale.set(v,v)}})};window.__bdHide=n=>{MAP.G.traverse(o=>{if(o.material&&o.material.name===n)o.visible=false})};window.__bdLook=(p,y,x,z)=>{P.pitch=p;P.yaw=y;if(x!=null){P.pos.x=x;P.pos.z=z;P.pos.y=groundAt(x,z,99)}}}
+if(window.__BD_TEST){window.__bdSfx=r=>{const o=JSON.stringify(SFX.n);if(r)SFX.reset();return o};window.__bdSim=s=>{for(let t=0;t<s;t+=1/30){update(1/30);opsUpdate(1/30)}};window.__bdShoot=()=>{if(P.reloading>0||CYC.on)return;shoot()};window.__bdAmmo=(a,r)=>{const ws=WS[WEAP[cur].id];ws.ammo=a;ws.reserve=r;updateAmmo()};window.__bdReload=()=>reload();window.__bdRemoteShot=(id,d,p)=>SFX.shot(CAT[id],{dist:d,pan:p});window.__bdNoAudio=()=>{SFX.kill();actx=null};window.__bdRl=()=>{const w=WEAP[cur],ws=WS[w.id];return JSON.stringify({on:RL.on,type:RL.type,empty:RL.empty,T:RL.T,ammo:ws.ammo,reserve:ws.reserve,magOff:w.magG?w.magBase.y-w.magG.position.y:0,cyc:CYC.on})};window.__bdRemoteTest=()=>{const r={pos:new THREE.Vector3(P.pos.x+12,P.pos.y,P.pos.z),yaw:Math.PI/2,pitch:0,data:{al:1,mv:1}};remoteShot(r,CAT.ak47,12);const g=NET.game;NET.game=g||{};NET.peers.set('__t',r);remoteSteps(.5);NET.peers.delete('__t');NET.game=g;return JSON.stringify(SFX.n)};window.__bdInfo=()=>new Promise(r=>requestAnimationFrame(()=>{renderer.info.autoReset=false;renderer.info.reset();requestAnimationFrame(()=>r(1))}));window.__bdWhy=()=>{const o={};const C=MAP;C.G.traverse(m=>{if(!m.isMesh)return;let k=m.userData.merged?'merged':Object.keys(m.userData).length?'ud:'+Object.keys(m.userData).join('+'):m.children.length?'children':Array.isArray(m.material)?'multimat':m.isInstancedMesh?'inst':'other';o[k]=(o[k]||0)+1});return JSON.stringify(o)};window.__bdInfo2=()=>{const r=renderer.info;const o={calls:r.render.calls,tris:r.render.triangles,geo:r.memory.geometries,tex:r.memory.textures,shadowMap:sun.shadow.mapSize.x,autoUpdate:renderer.shadowMap.autoUpdate,objs:0,meshes:0,lights:0};scene.traverse(x=>{o.objs++;if(x.isMesh)o.meshes++;if(x.isLight)o.lights++});r.autoReset=true;return JSON.stringify(o)};window.__bdMerge=()=>JSON.stringify(MG.stats);window.__bdDrs=(slow)=>{for(let i=0;i<(slow?240:300);i++)drsTick(slow?1/20:1/60);return DRS.s};window.__bdQ=(q,np)=>{NOPIPE=!!np;qual=q;applyQuality();return QNAMES[qual]};window.__bdAds=v=>{P.ads=v};window.__bdBoom=(k,d)=>{const p=camera.position.clone().addScaledVector(camera.getWorldDirection(new THREE.Vector3()),d||12);p.y=MAP.heightAt(p.x,p.z)+.2;explode(k,p,true)};window.__bdW=i=>selectW(i,true);window.__bdSet=(p,s)=>{LOAD.p=p;if(s)LOAD.s=s;applyLoadout()};window.__bdPrep=()=>{prepT=0};window.__bdLoot=()=>{const l=LOOT[0];P.pos.set(l.p.x+2.2,l.p.y+.05,l.p.z);P.yaw=Math.atan2(2.2,0);P.pitch=-.35;return LOOT.length};window.__bdDrop=()=>{const D=spawnDrop(0);D.p.set(P.pos.x-Math.sin(P.yaw)*7,D.gy+9,P.pos.z-Math.cos(P.yaw)*7);D.gy=groundAt(D.p.x,D.p.z,60);D.p.y=D.gy+9};window.__bdMolly=()=>{const p=camera.position.clone().addScaledVector(camera.getWorldDirection(new THREE.Vector3()),9);p.y=MAP.heightAt(p.x,p.z)+.1;explode('molly',p,true)};window.__bdFire=v=>{fireHeld=v};window.__bdBombs=()=>JSON.stringify({n:BOMBS.length,w:WEAP[cur].id,prepT,g:P.onGround,st:state,fh:fireHeld,lo:loadOpen,p:paused,sw:swapT,u:useT});window.__bdStep=s=>{for(let i=0;i<s/.033;i++){boomUpdate(.033);opsUpdate(.033)}};window.__bdHurt=()=>hurt(50,'Test');window.__bdShadow=v=>{sun.castShadow=v};window.__bdBias=(b,nb)=>{sun.shadow.bias=b;sun.shadow.normalBias=nb};window.__bdNS=(n,v,drop)=>{MAP.G.traverse(o=>{if(o.material&&o.material.name===n){if(drop){o.material.normalMap=null;o.material.needsUpdate=true}else o.material.normalScale.set(v,v)}})};window.__bdHide=n=>{MAP.G.traverse(o=>{if(o.material&&o.material.name===n)o.visible=false})};window.__bdLook=(p,y,x,z)=>{P.pitch=p;P.yaw=y;if(x!=null){P.pos.x=x;P.pos.z=z;P.pos.y=groundAt(x,z,99)}}}
 setInterval(()=>{if(NET.inv&&Date.now()-NET.inv.t>120000){NET.inv=null;lobbyPresence()}if(state==='menu')renderSocial()},5000);
 requestAnimationFrame(frame);
 })();
