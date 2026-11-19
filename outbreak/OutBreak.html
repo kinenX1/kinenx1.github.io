@@ -3747,7 +3747,8 @@ function songName(file){let n=file.replace(/\.[a-z0-9]+$/i,'').replace(/^[0-9a-f
   let artist=m.length>1?m[0].trim():'',title=(m.length>1?m.slice(1).join(' - '):n).trim();const ft=title.match(/\s+ft\.?\s+(.*)$/i);if(ft){title=title.slice(0,ft.index).trim();artist=artist?artist+' ft. '+ft[1].trim():ft[1].trim()}
   return {artist,title}}
 const stSongs=st=>RADIO.songs.filter(x=>x.st===st);
-async function radioLoad(){try{const all=await radioTx('readonly',s=>s.getAll());RADIO.songs=(all||[]).map(x=>({id:x.id,title:x.title,artist:x.artist,blob:x.blob,st:x.st||'vice'}))}catch(e){}RADIO.ready=true;for(const k of ST_IDS)radioShuffle(k);radioList()}
+async function radioLoad(){try{const all=await radioTx('readonly',s=>s.getAll());RADIO.songs=(all||[]).map(x=>({id:x.id,title:x.title,artist:x.artist,blob:x.blob,st:x.st||'vice'}))}catch(e){}
+  try{if(window.OBNative&&OBNative.songs){for(const x of JSON.parse(OBNative.songs()))if(STATIONS[x.st])RADIO.songs.push({id:'app:'+x.file,title:x.title,artist:x.artist||'',st:x.st,url:'/outbreak/_app/radio/'+encodeURIComponent(x.file),app:true})}}catch(e){}RADIO.ready=true;for(const k of ST_IDS)radioShuffle(k);radioList()}
 function radioShuffle(st){const o=stSongs(st).map(x=>x.id);for(let i=o.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[o[i],o[j]]=[o[j],o[i]]}RADIO.ord[st]=o;RADIO.idx[st]=-1}
 async function radioAdd(files,st){let n=0;for(const f of files){if(!f||!/^audio\//.test(f.type)&&!/\.(mp3|m4a|aac|ogg|wav)$/i.test(f.name))continue;const nm=songName(f.name);const rec={id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),title:nm.title||'Track',artist:nm.artist,blob:f,st};
     try{await radioTx('readwrite',s=>s.put(rec));RADIO.songs.push(rec);n++}catch(e){feed('Could not save '+f.name+' (storage full?)');break}}
@@ -3767,10 +3768,11 @@ function radioEl(){if(!RADIO.el){RADIO.el=new Audio();RADIO.el.preload='auto';RA
 function radioStop(){const a=RADIO.el;if(a){a.pause();a.removeAttribute('src');a.load()}if(RADIO.url){URL.revokeObjectURL(RADIO.url);RADIO.url=null}RADIO.cur=null;try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}RADIO.dj=false}
 function radioNext(intro){const st=RADIO.st;if(!st||!RADIO.want||!stSongs(st).length)return;let o=RADIO.ord[st]||[];RADIO.idx[st]=(RADIO.idx[st]??-1)+1;
   if(RADIO.idx[st]>=o.length){const last=o[o.length-1];radioShuffle(st);o=RADIO.ord[st];if(o.length>1&&o[0]===last)o.push(o.shift());RADIO.idx[st]=0}
-  const s=RADIO.songs.find(x=>x.id===o[RADIO.idx[st]]);if(!s)return;radioStop();RADIO.cur=s;const a=radioEl();RADIO.url=URL.createObjectURL(s.blob);a.src=RADIO.url;a.volume=0;
+  const s=RADIO.songs.find(x=>x.id===o[RADIO.idx[st]]);if(!s)return;radioStop();RADIO.cur=s;const a=radioEl();a.volume=0;let ready=false,said=false;
+  const go=()=>{if(ready&&said){RADIO.dj=false;if(!RADIO.want||RADIO.cur!==s)return;a.play().catch(()=>{});radioCard(st,s)}};
+  (s.blob?Promise.resolve(s.blob):fetch(s.url).then(r=>{if(!r.ok)throw new Error('song '+r.status);return r.blob()})).then(b=>{if(RADIO.cur!==s)return;RADIO.url=URL.createObjectURL(b);a.src=RADIO.url;ready=true;go()}).catch(()=>{if(RADIO.cur===s)setTimeout(()=>radioNext(),800)});
   const S=STATIONS[st],label=s.artist?`${s.title}, by ${s.artist.replace(/\bft\.?/i,'featuring')}`:s.title,next=S.next(label);
-  const start=()=>{RADIO.dj=false;if(!RADIO.want||RADIO.cur!==s)return;a.play().catch(()=>{});radioCard(st,s)};
-  djSay((intro?S.intro[Math.random()*S.intro.length|0]+' ':'')+next[Math.random()*next.length|0],start)}
+  djSay((intro?S.intro[Math.random()*S.intro.length|0]+' ':'')+next[Math.random()*next.length|0],()=>{said=true;go()})}
 function radioTune(st,manual){if(manual)RADIO.manual=true;if(st===RADIO.st)return;radioStop();RADIO.st=st;RADIO.want=false;RADIO.off=!st;store.set('ob.radio',!!st);if(st)radioCard(st,null);else radioOffCard();radioUi()}
 function radioCycle(){const list=[...ST_IDS,null],i=list.indexOf(RADIO.st);radioTune(list[(i+1)%list.length],true)}
 function radioSkip(){if(!RADIO.want){if(RADIO.st&&!stSongs(RADIO.st).length)feed('Add songs to '+STATIONS[RADIO.st].name+' in Settings');return}radioNext(false)}
@@ -3795,7 +3797,7 @@ $('radioOnBtn').addEventListener('click',()=>radioTune(RADIO.st?null:(RADIO.tab|
 function radioUi(){$('radioOnBtn').textContent=RADIO.st?'Playing: '+STATIONS[RADIO.st].name+' · turn off':'Radio off · turn on';const b=$('tRadio');if(b)b.classList.toggle('on',!!RADIO.st)}
 function radioList(){const L=$('radioList');if(!L)return;for(const b of document.querySelectorAll('.rTab'))b.classList.toggle('on',b.dataset.st===RADIO.tab);$('radioAddBtn').textContent='+ Add songs to '+STATIONS[RADIO.tab].name;L.innerHTML='';const list=stSongs(RADIO.tab);
   if(!list.length){L.innerHTML='<p class="lbl" style="text-transform:none;letter-spacing:0;opacity:.7">No songs on '+STATIONS[RADIO.tab].name+' yet. Tap “Add songs” and pick MP3s from your phone or PC.</p>';return}
-  for(const s of list){const r=document.createElement('div');r.className='rRow';const t=document.createElement('span');t.textContent=(s.artist?s.artist+' – ':'')+s.title;t.title='Tap to rename';t.style.cursor='pointer';t.addEventListener('click',()=>radioRename(s));const x=document.createElement('button');x.className='btn ghost sm';x.type='button';x.textContent='✕';x.title='Remove';x.addEventListener('click',()=>radioRemove(s.id));r.append(t,x);L.append(r)}}
+  for(const s of list){const r=document.createElement('div');r.className='rRow';const t=document.createElement('span');t.textContent=(s.artist?s.artist+' – ':'')+s.title;if(!s.app){t.title='Tap to rename';t.style.cursor='pointer';t.addEventListener('click',()=>radioRename(s))}if(s.app){const k=document.createElement('small');k.className='lbl';k.textContent='built-in';r.append(t,k);L.append(r);continue}const x=document.createElement('button');x.className='btn ghost sm';x.type='button';x.textContent='✕';x.title='Remove';x.addEventListener('click',()=>radioRemove(s.id));r.append(t,x);L.append(r)}}
 radioUi();radioLoad();
 // in-game: J = next station (or off), N = next song; phone 📻 = next station
 document.addEventListener('keydown',e=>{if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT'))return;if(e.code==='KeyN')radioSkip();else if(e.code==='KeyJ')radioCycle()});
