@@ -61,7 +61,7 @@ input:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px
 .spin{width:54px;height:54px;border-radius:50%;border:5px solid var(--line);border-top-color:var(--acc);margin:10px auto 16px;animation:s 1s linear infinite}
 @keyframes s{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
-.hero{display:grid;place-items:center;font-size:84px;line-height:1;margin:16px 0 0;filter:drop-shadow(0 10px 20px #000a)}
+.hero{display:flex;justify-content:center;gap:6px;font-size:84px;line-height:1;margin:16px 0 0;filter:drop-shadow(0 10px 20px #000a)}
 </style>
 </head>
 <body>
@@ -163,6 +163,7 @@ $('authBtn').onclick=async()=>{const er=$('authErr');er.style.color='';er.textCo
   let r;try{r=await Promise.race([signUp?sb.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}}):sb.auth.signInWithPassword({email,password}),timeout])}catch(x){r={error:{message:'Could not connect: '+x.message}}}
   $('authBtn').disabled=false;er.style.color='';er.textContent='';
   if(r.error){er.textContent=r.error.message;return}
+  if(signUp&&r.data.user&&r.data.user.identities&&r.data.user.identities.length===0){er.textContent='This email already has an account. Tap Sign in.';return}
   if(signUp&&!r.data.session){er.style.color='var(--ok)';er.textContent='Check your email and tap the link to confirm, then sign in.';return}
 };
 $('gBtn').onclick=async()=>{const r=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
