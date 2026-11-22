@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chess Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#14110e;--panel:#1f1a15;--line:#3a3128;--ink:#f4ece1;--mute:#a99a88;--acc:#ff6a3d;--light:#ecd7ae;--dark:#a46d3e;--ok:#5fd38d}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#3a2a1c,var(--bg));color:var(--ink);font:16px/1.5 Outfit,system-ui,sans-serif;min-height:100vh;overflow-x:clip}
+.wrap{max-width:560px;margin:0 auto;padding:18px 14px 40px}
+h1{font-size:40px;line-height:1.05;margin:8px 0 4px;font-weight:800}
+h2{font-size:22px;margin:0 0 12px}
+.mute{color:var(--mute);font-size:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0}
+input,button{font:inherit;font-size:16px}
+input[type=text],input[type=email],input[type=password]{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#120f0c;color:var(--ink);margin:6px 0 10px}
+input:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.btn{min-height:46px;padding:10px 18px;border-radius:12px;border:0;background:var(--acc);color:#1a0d06;font-weight:700;cursor:pointer;width:100%}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.g{background:#fff;color:#222;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn:disabled{opacity:.5}
+.row{display:flex;gap:10px;align-items:center}
+.tabs{display:flex;gap:6px;margin-bottom:12px}.tabs button{flex:1;min-height:42px;border-radius:10px;border:1px solid var(--line);background:none;color:var(--mute);cursor:pointer}
+.tabs button.on{background:var(--line);color:var(--ink)}
+.err{color:#ff8c7a;font-size:14px;min-height:20px}
+.lv{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lv button{min-height:84px;border-radius:14px;border:1px solid var(--line);background:#120f0c;color:var(--ink);cursor:pointer;text-align:left;padding:12px}
+.lv button.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc) inset}
+.lv b{display:block;font-size:17px}.lv span{color:var(--acc);font-weight:800}
+.av{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#2b241d;flex:none;display:grid;place-items:center;font-weight:800;color:var(--mute);overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover}
+.av.big{width:96px;height:96px;font-size:30px}
+.av.sm{width:40px;height:40px;font-size:15px}
+.elo{font-size:30px;font-weight:800;color:var(--acc)}
+.modes{display:grid;gap:12px}
+.mode{display:flex;justify-content:space-between;align-items:center;min-height:78px;border-radius:16px;border:1px solid var(--line);background:linear-gradient(120deg,#2a2119,#1a1511);color:var(--ink);padding:14px 18px;cursor:pointer;text-align:left}
+.mode b{font-size:22px;display:block}.mode .t{font-size:26px;font-weight:800;color:var(--acc);white-space:nowrap}
+.lb div{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.lb div:last-child{border:0}.lb .r{margin-left:auto;font-weight:700;color:var(--acc)}
+.hide{display:none!important}
+.player{display:flex;align-items:center;gap:10px;padding:8px 2px}
+.player .nm{font-weight:700;line-height:1.2}.player .clk{margin-left:auto;font-size:24px;font-weight:800;padding:4px 12px;border-radius:10px;background:#2b241d;font-variant-numeric:tabular-nums}
+.clk.run{background:var(--ink);color:#14110e}.clk.low{background:#c0392b;color:#fff}
+#board{display:grid;grid-template-columns:repeat(8,1fr);width:100%;aspect-ratio:1;border-radius:10px;overflow:hidden;box-shadow:0 20px 50px #0009,0 0 0 6px #2b1d12;user-select:none;touch-action:manipulation}
+.sq{position:relative;display:grid;place-items:center;font-size:min(10vw,54px);line-height:1;cursor:pointer}
+.sq.l{background:var(--light)}.sq.d{background:var(--dark)}
+.sq.sel{background:#f6d35b}.sq.last.l{background:#e6dd7a}.sq.last.d{background:#c4a447}
+.sq.chk{background:radial-gradient(circle,#ff3b2f 0,#ff3b2f55 55%,transparent 75%)}
+.sq .dot{position:absolute;width:30%;height:30%;border-radius:50%;background:#0004}
+.sq .ring{position:absolute;inset:6%;border-radius:50%;border:5px solid #0004}
+.pc{filter:drop-shadow(0 2px 1px #0007);pointer-events:none}
+.pc.w{color:#fffaf0;-webkit-text-stroke:1.5px #3a2a1a}.pc.b{color:#1c140e;-webkit-text-stroke:1px #000}
+.coord{position:absolute;font-size:11px;font-weight:700;opacity:.7}.coord.f{right:3px;bottom:1px}.coord.r{left:3px;top:1px}
+.l .coord{color:var(--dark)}.d .coord{color:var(--light)}
+.moves{font-size:14px;color:var(--mute);max-height:70px;overflow:auto;margin:10px 0}
+.modal{position:fixed;inset:0;background:#000b;display:grid;place-items:center;padding:20px;z-index:9}
+.modal .card{max-width:380px;width:100%;text-align:center}
+.spin{width:54px;height:54px;border-radius:50%;border:5px solid var(--line);border-top-color:var(--acc);margin:10px auto 16px;animation:s 1s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
+.hero{display:grid;place-items:center;font-size:84px;line-height:1;margin:16px 0 0;filter:drop-shadow(0 10px 20px #000a)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- AUTH -->
+<section id="vAuth" class="hide">
+  <div class="hero"><span style="color:#fffaf0">♔</span><span style="color:var(--acc)">♚</span></div>
+  <h1 style="text-align:center">Chess Arena</h1>
+  <p class="mute" style="text-align:center">Play real people online. Win E, climb the ranks.</p>
+  <div class="card">
+    <button class="btn g" id="gBtn"><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Continue with Google</button>
+    <p class="mute" style="text-align:center;margin:14px 0">or with email</p>
+    <div class="tabs"><button id="tIn" class="on">Sign in</button><button id="tUp">Create account</button></div>
+    <div id="authForm">
+      <input type="email" id="email" placeholder="Email" autocomplete="email" required>
+      <input type="password" id="pass" placeholder="Password (6+ characters)" autocomplete="current-password" minlength="6" required>
+      <div class="err" id="authErr"></div>
+      <button type="button" class="btn" id="authBtn">Sign in</button>
+    </div>
+  </div>
+</section>
+
+<!-- PROFILE SETUP -->
+<section id="vSetup" class="hide">
+  <h1>Your profile</h1>
+  <p class="mute">Pick a name, a picture and your level. Your level sets your starting E.</p>
+  <div class="card">
+    <div class="row" style="gap:16px">
+      <label class="av big" id="pickAv" for="file" style="cursor:pointer">+</label>
+      <div style="flex:1"><label class="btn ghost" for="file" style="display:grid;place-items:center">Choose picture</label>
+      <input type="file" id="file" accept="image/*" class="hide"></div>
+    </div>
+    <input type="text" id="uname" placeholder="Username" maxlength="20" style="margin-top:16px">
+    <h2 style="margin-top:8px">What's your level?</h2>
+    <div class="lv" id="levels"></div>
+    <div class="err" id="setupErr"></div>
+    <button class="btn" id="saveProf">Enter the arena</button>
+  </div>
+</section>
+
+<!-- LOBBY -->
+<section id="vLobby" class="hide">
+  <div class="card row" style="gap:14px">
+    <div class="av big" id="meAv"></div>
+    <div style="flex:1"><div style="font-size:22px;font-weight:800" id="meName"></div>
+      <div class="mute" id="meLvl"></div>
+      <div class="mute" id="meWL"></div></div>
+    <div style="text-align:right"><div class="elo" id="meElo"></div><div class="mute">E</div></div>
+  </div>
+  <div class="card hide" id="rejoin"><b>You have a game in progress.</b><button class="btn" style="margin-top:10px" id="rejoinBtn">Back to the game</button></div>
+  <h2 style="margin-top:22px">Play</h2>
+  <div class="modes" id="modes"></div>
+  <div class="card"><h2>Top players</h2><div class="lb" id="lb"><span class="mute">Loading…</span></div></div>
+  <button class="btn ghost" id="outBtn">Sign out</button>
+</section>
+
+<!-- GAME -->
+<section id="vGame" class="hide">
+  <div class="player" id="opBar"></div>
+  <div id="board"></div>
+  <div class="player" id="myBar"></div>
+  <div class="moves" id="movesList"></div>
+  <div class="row"><button class="btn ghost" id="resignBtn">Resign</button></div>
+</section>
+</div>
+
+<div class="modal hide" id="mSearch"><div class="card"><div class="spin"></div><h2 id="searchTitle">Finding an opponent…</h2><p class="mute" id="searchSub"></p><button class="btn ghost" id="cancelSearch">Cancel</button></div></div>
+<div class="modal hide" id="mEnd"><div class="card"><div style="font-size:60px" id="endIcon"></div><h2 id="endTitle"></h2><p class="mute" id="endWhy"></p><div class="elo" id="endDelta"></div><button class="btn" id="endBtn" style="margin-top:14px">Back to lobby</button></div></div>
+<div class="modal hide" id="mAsk"><div class="card"><h2>Resign this game?</h2><div class="row"><button class="btn ghost" id="askNo">Keep playing</button><button class="btn" id="askYes">Resign</button></div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.js"></script>
+<script>
+{
+const SB_URL='https://xmvlnconokorqvaivobz.supabase.co';
+const SB_KEY='sb_publishable_0NvLGvgO98TqWoazq7yrjw_c7fVED7B';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+const $=id=>document.getElementById(id);
+const LEVELS=[['beginner','Beginner',100],['mid','Mid-player',400],['midmaster','Mid-Master',1000],['master','Master',1500]];
+const MODES=[['normal','Normal','10 min'],['super','Super','3 min'],['master','Master','1 min']];
+const GLYPH={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let user=null,me=null,avatarData=null,pickedLevel=null,signUp=false;
+let game=null,chess=null,myColor='w',sel=null,opp=null,chan=null,poll=null,tick=null,clockRef=null,searchId=null,searchPoll=null,claimAt=0;
+
+function show(v){for(const s of ['vAuth','vSetup','vLobby','vGame'])$(s).classList.toggle('hide',s!==v)}
+function avHTML(p,cls=''){return `<div class="av ${cls}">${p&&p.avatar?`<img src="${esc(p.avatar)}" alt="">`:esc((p?.username||'?')[0].toUpperCase())}</div>`}
+
+/* ---------- AUTH ---------- */
+$('tIn').onclick=()=>{signUp=false;$('tIn').classList.add('on');$('tUp').classList.remove('on');$('authBtn').textContent='Sign in';$('authErr').textContent=''};
+$('tUp').onclick=()=>{signUp=true;$('tUp').classList.add('on');$('tIn').classList.remove('on');$('authBtn').textContent='Create account';$('authErr').textContent=''};
+$('authBtn').onclick=async()=>{const er=$('authErr');er.style.color='';er.textContent='';
+  const email=$('email').value.trim(),password=$('pass').value;
+  if(!/^\S+@\S+\.\S+$/.test(email)){er.textContent='Type a valid email.';return}
+  if(password.length<6){er.textContent='Password needs at least 6 characters.';return}
+  $('authBtn').disabled=true;er.style.color='var(--mute)';er.textContent='Connecting…';
+  const timeout=new Promise(res=>setTimeout(()=>res({error:{message:'No answer from the server. Open the app from its website link (not a file preview) and check your internet.'}}),12000));
+  let r;try{r=await Promise.race([signUp?sb.auth.signUp({email,password}):sb.auth.signInWithPassword({email,password}),timeout])}catch(x){r={error:{message:'Could not connect: '+x.message}}}
+  $('authBtn').disabled=false;er.style.color='';er.textContent='';
+  if(r.error){er.textContent=r.error.message;return}
+  if(signUp&&!r.data.session){er.style.color='var(--ok)';er.textContent='Check your email and tap the link to confirm, then sign in.';return}
+};
+$('gBtn').onclick=async()=>{const r=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
+  if(r.error)$('authErr').textContent='Google sign-in is not switched on yet: '+r.error.message};
+$('outBtn').onclick=async()=>{await sb.auth.signOut();me=null;show('vAuth')};
+
+let booted=false;
+sb.auth.onAuthStateChange((_e,session)=>{const u=session?.user||null;if(booted&&u?.id===user?.id)return;booted=true;user=u;setTimeout(route,0)});
+
+async function route(){
+  if(!user){show('vAuth');return}
+  const {data}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();
+  if(!data){setupView();return}
+  me=data;lobby();
+}
+
+/* ---------- PROFILE ---------- */
+function setupView(){
+  show('vSetup');
+  const g=user.user_metadata||{};
+  if(g.full_name&&!$('uname').value)$('uname').value=g.full_name.slice(0,20);
+  $('levels').innerHTML=LEVELS.map(([k,n,e])=>`<button data-k="${k}"><b>${n}</b>Start with <span>${e} E</span></button>`).join('');
+  $('levels').querySelectorAll('button').forEach(b=>b.onclick=()=>{pickedLevel=b.dataset.k;$('levels').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))});
+}
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const img=new Image();
+  img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=160;const s=Math.min(img.width,img.height);
+    c.getContext('2d').drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,160,160);
+    avatarData=c.toDataURL('image/jpeg',.8);$('pickAv').innerHTML=`<img src="${avatarData}" alt="">`;URL.revokeObjectURL(img.src)};
+  img.src=URL.createObjectURL(f)};
+$('saveProf').onclick=async()=>{
+  const username=$('uname').value.trim();
+  if(username.length<2)return $('setupErr').textContent='Username needs at least 2 letters.';
+  if(!pickedLevel)return $('setupErr').textContent='Pick your level.';
+  $('saveProf').disabled=true;
+  const {error}=await sb.from('profiles').insert({id:user.id,username,avatar:avatarData,level:pickedLevel});
+  $('saveProf').disabled=false;
+  if(error)return $('setupErr').textContent=error.message;
+  route();
+};
+
+/* ---------- LOBBY ---------- */
+async function lobby(){
+  stopGame();show('vLobby');
+  const {data}=await sb.from('profiles').select('*').eq('id',user.id).single();if(data)me=data;
+  $('meAv').outerHTML=avHTML(me,'big').replace('class="av big"','class="av big" id="meAv"');
+  $('meName').textContent=me.username;
+  $('meLvl').textContent=LEVELS.find(l=>l[0]===me.level)[1];
+  $('meWL').textContent=`${me.wins} W · ${me.losses} L · ${me.draws} D`;
+  $('meElo').textContent=me.rating;
+  $('modes').innerHTML=MODES.map(([k,n,t])=>`<button class="mode" data-k="${k}"><div><b>${n}</b><span class="mute">Ranked · 1 vs 1</span></div><div class="t">${t}</div></button>`).join('');
+  $('modes').querySelectorAll('.mode').forEach(b=>b.onclick=()=>search(b.dataset.k));
+  const act=await sb.from('games').select('id').eq('status','active').or(`white.eq.${user.id},black.eq.${user.id}`).limit(1);
+  const g=act.data?.[0];$('rejoin').classList.toggle('hide',!g);if(g)$('rejoinBtn').onclick=()=>openGame(g.id);
+  const lb=await sb.rpc('leaderboard');
+  $('lb').innerHTML=(lb.data||[]).map((p,i)=>`<div><b style="width:22px">${i+1}</b>${avHTML(p,'sm')}<span>${esc(p.username)}</span><span class="r">${p.rating}</span></div>`).join('')||'<span class="mute">No players yet.</span>';
+}
+
+/* ---------- MATCHMAKING ---------- */
+async function search(mode){
+  const m=MODES.find(x=>x[0]===mode);
+  $('searchTitle').textContent='Finding an opponent…';$('searchSub').textContent=`${m[1]} · ${m[2]} each`;$('mSearch').classList.remove('hide');
+  const {data,error}=await sb.rpc('find_match',{p_mode:mode});
+  if(error){$('searchTitle').textContent='Could not search';$('searchSub').textContent=error.message;return}
+  searchId=data;
+  const check=async()=>{const r=await sb.from('games').select('status').eq('id',searchId).single();
+    if(r.data?.status==='active'){clearInterval(searchPoll);$('mSearch').classList.add('hide');openGame(searchId)}};
+  check();searchPoll=setInterval(check,1500);
+}
+$('cancelSearch').onclick=async()=>{clearInterval(searchPoll);$('mSearch').classList.add('hide');if(searchId)await sb.rpc('cancel_search',{g_id:searchId});searchId=null};
+
+/* ---------- GAME ---------- */
+async function openGame(id){
+  const {data:g}=await sb.from('games').select('*').eq('id',id).single();if(!g)return;
+  myColor=g.white===user.id?'w':'b';
+  const oid=myColor==='w'?g.black:g.white;
+  const {data:o}=await sb.from('profiles').select('username,avatar,rating').eq('id',oid).single();opp=o;
+  chess=new Chess();show('vGame');apply(g);
+  chan=sb.channel('g'+id).on('postgres_changes',{event:'UPDATE',schema:'public',table:'games',filter:`id=eq.${id}`},p=>apply(p.new)).subscribe();
+  poll=setInterval(async()=>{const r=await sb.from('games').select('*').eq('id',id).single();if(r.data&&(r.data.moves.length!==game.moves.length||r.data.status!==game.status))apply(r.data)},4000);
+  tick=setInterval(drawClocks,200);
+}
+function stopGame(){if(chan)sb.removeChannel(chan);chan=null;clearInterval(poll);clearInterval(tick);game=null}
+
+function apply(g){
+  if(game&&g.moves.length<game.moves.length&&g.status===game.status)return;
+  game=g;chess.load(g.fen);sel=null;
+  clockRef={w:g.white_ms,b:g.black_ms,t0:Date.now(),running:g.status==='active'&&g.moves.length>=2};
+  render();
+  if(g.status==='finished')endGame(g);
+  if(g.status==='cancelled'){stopGame();endCancelled()}
+}
+function msLeft(c){if(!clockRef)return 0;let v=clockRef[c];if(clockRef.running&&chess.turn()===c)v-=Date.now()-clockRef.t0;return Math.max(0,v)}
+function fmt(ms){const s=Math.ceil(ms/1000),m=Math.floor(s/60);return ms<10000?(ms/1000).toFixed(1):`${m}:${String(s%60).padStart(2,'0')}`}
+function bar(p,c,el){el.innerHTML=`${avHTML(p,'sm')}<div><div class="nm">${esc(p.username)}</div><div class="mute">${p.rating} E · ${c==='w'?'White':'Black'}</div></div><div class="clk" id="clk${c}"></div>`}
+function render(){
+  const opc=myColor==='w'?'b':'w';bar(opp,opc,$('opBar'));bar(me,myColor,$('myBar'));drawClocks();
+  const b=chess.board(),last=game.moves.at(-1),hist=last?[last.slice(0,2),last.slice(2,4)]:[];
+  const targets=sel?chess.moves({square:sel,verbose:true}):[];
+  let h='';
+  for(let i=0;i<8;i++)for(let j=0;j<8;j++){
+    const r=myColor==='w'?i:7-i,f=myColor==='w'?j:7-j,sq='abcdefgh'[f]+(8-r),pc=b[r][f];
+    const cls=['sq',(r+f)%2?'d':'l'];
+    if(hist.includes(sq))cls.push('last');if(sq===sel)cls.push('sel');
+    if(pc&&pc.type==='k'&&pc.color===chess.turn()&&chess.in_check())cls.push('chk');
+    const t=targets.find(m=>m.to===sq);
+    h+=`<div class="${cls.join(' ')}" data-sq="${sq}">${pc?`<span class="pc ${pc.color}">${GLYPH[pc.type]}</span>`:''}${t?(pc?'<span class="ring"></span>':'<span class="dot"></span>'):''}${j===7?`<span class="coord r">${8-r}</span>`:''}${i===7?`<span class="coord f">${'abcdefgh'[f]}</span>`:''}</div>`;
+  }
+  $('board').innerHTML=h;
+  const hs=[];for(let k=0;k<game.moves.length;k+=2)hs.push(`${k/2+1}. ${game.moves[k]} ${game.moves[k+1]||''}`);
+  $('movesList').textContent=hs.join('   ')||(chess.turn()===myColor?'Your move — you have 60 s for the first move.':'Waiting for opponent’s first move…');
+  $('movesList').scrollLeft=1e9;
+}
+function drawClocks(){
+  if(!game)return;
+  for(const c of ['w','b']){const el=$('clk'+c);if(!el)continue;const v=msLeft(c);el.textContent=fmt(v);
+    el.className='clk'+(game.status==='active'&&chess.turn()===c?' run':'')+(v<20000?' low':'');}
+  if(game.status==='active'&&Date.now()-claimAt>2000){
+    const t=chess.turn(),dead=clockRef.running?msLeft(t)<=0:Date.now()-new Date(game.last_move_at).getTime()>61000;
+    if(dead){claimAt=Date.now();sb.rpc('claim_timeout',{g_id:game.id})}
+  }
+}
+$('board').onclick=e=>{
+  const d=e.target.closest('.sq');if(!d||!game||game.status!=='active'||chess.turn()!==myColor)return;
+  const sq=d.dataset.sq,pc=chess.get(sq);
+  if(sel){const mv=chess.moves({square:sel,verbose:true}).find(m=>m.to===sq);
+    if(mv){move(mv);return}}
+  sel=pc&&pc.color===myColor?sq:null;render();
+};
+async function move(mv){
+  const res=chess.move({from:mv.from,to:mv.to,promotion:'q'});sel=null;
+  const uci=res.from+res.to+(res.promotion||'');
+  let over='';
+  if(chess.in_checkmate())over='checkmate';else if(chess.in_stalemate())over='stalemate';
+  else if(chess.insufficient_material())over='insufficient';else if(chess.in_draw())over='fifty';
+  const fen=chess.fen();
+  game={...game,moves:[...game.moves,uci],fen};
+  clockRef={w:msLeft('w'),b:msLeft('b'),t0:Date.now(),running:game.moves.length>=2};
+  render();
+  const {error}=await sb.rpc('make_move',{g_id:game.id,p_move:uci,p_fen:fen,p_over:over});
+  if(error){const r=await sb.from('games').select('*').eq('id',game.id).single();game=null;if(r.data){game=r.data;apply(r.data)}}
+}
+$('resignBtn').onclick=()=>$('mAsk').classList.remove('hide');
+$('askNo').onclick=()=>$('mAsk').classList.add('hide');
+$('askYes').onclick=async()=>{$('mAsk').classList.add('hide');if(game)await sb.rpc('resign',{g_id:game.id})};
+
+function endGame(g){
+  stopGame();
+  const mine=myColor==='w'?'white':'black',delta=myColor==='w'?g.white_delta:g.black_delta;
+  const win=g.result===mine,draw=g.result==='draw';
+  $('endIcon').textContent=win?'🏆':draw?'🤝':'♟';
+  $('endTitle').textContent=win?'You won!':draw?'Draw':'You lost';
+  $('endWhy').textContent={checkmate:'by checkmate',timeout:'on time',resignation:'by resignation',stalemate:'stalemate',insufficient:'not enough pieces to mate',fifty:'50-move rule'}[g.reason]||'';
+  $('endDelta').textContent=(delta>0?'+':'')+delta+' E';
+  $('endDelta').style.color=delta>0?'var(--ok)':delta<0?'#ff8c7a':'var(--mute)';
+  $('mEnd').classList.remove('hide');
+}
+function endCancelled(){$('endIcon').textContent='⏱';$('endTitle').textContent='Game cancelled';$('endWhy').textContent='Nobody made the first move in time. No E lost.';$('endDelta').textContent='';$('mEnd').classList.remove('hide')}
+$('endBtn').onclick=()=>{$('mEnd').classList.add('hide');lobby()};
+
+}
+</script>
+</body>
+</html>
