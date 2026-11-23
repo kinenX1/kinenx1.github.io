@@ -5,58 +5,109 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Roadster Terminal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#1b1d23; --win:#23262e; --bar:#2c3039; --text:#e6e1d6;
-    --dim:#8a8f9c; --green:#9ccf8a; --yellow:#e8c879; --red:#e88a7d; --blue:#8fb8e8;
+    --bg:#070b12; --win:rgba(14,20,32,.82); --bar:rgba(22,30,46,.9); --text:#dfe8f2;
+    --dim:#6f7f96; --cyan:#4ff0ff; --green:#5effa8; --yellow:#ffd36b; --red:#ff6b81; --violet:#a98bff;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{
-    background:radial-gradient(circle at 30% 20%,#2a2e38 0%,var(--bg) 60%);
+    background:var(--bg);
     font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
     color:var(--text); display:flex; align-items:center; justify-content:center; padding:16px;
+    overflow:hidden; position:relative;
   }
+  /* moving grid floor */
+  .grid{
+    position:fixed; inset:-50% -50% 0 -50%; z-index:0; pointer-events:none;
+    background-image:
+      linear-gradient(rgba(79,240,255,.09) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(79,240,255,.09) 1px,transparent 1px);
+    background-size:48px 48px;
+    transform:perspective(600px) rotateX(62deg) translateY(30%);
+    animation:gridmove 6s linear infinite;
+    mask-image:linear-gradient(to top,#000 10%,transparent 70%);
+    -webkit-mask-image:linear-gradient(to top,#000 10%,transparent 70%);
+  }
+  @keyframes gridmove{to{background-position:0 48px,0 0}}
+  .glow{position:fixed;width:520px;height:520px;border-radius:50%;filter:blur(120px);opacity:.25;z-index:0;pointer-events:none}
+  .g1{background:#1fb8ff;top:-160px;left:-120px}
+  .g2{background:#8a5cff;bottom:-200px;right:-140px}
+
   .win{
-    width:100%; max-width:760px; height:min(560px,85vh);
-    background:var(--win); border-radius:12px; overflow:hidden;
-    box-shadow:0 20px 60px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.05);
+    position:relative; z-index:1;
+    width:100%; max-width:920px; height:min(620px,86vh);
+    background:var(--win); border-radius:14px; overflow:hidden;
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border:1px solid rgba(79,240,255,.25);
+    box-shadow:0 0 0 1px rgba(79,240,255,.05),0 0 40px rgba(79,240,255,.12),0 30px 80px rgba(0,0,0,.6);
     display:flex; flex-direction:column;
   }
-  .bar{background:var(--bar); padding:11px 14px; display:flex; align-items:center; gap:8px; position:relative}
+  /* soft scanlines */
+  .win::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(to bottom,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);
+  }
+  .bar{background:var(--bar); padding:12px 16px; display:flex; align-items:center; gap:8px; position:relative;
+       border-bottom:1px solid rgba(79,240,255,.15)}
   .dot{width:12px;height:12px;border-radius:50%}
-  .r{background:#ec6a5e}.y{background:#f4bf4f}.g{background:#61c554}
-  .title{position:absolute;left:0;right:0;text-align:center;font-size:12px;color:var(--dim);pointer-events:none}
-  .body{flex:1; overflow-y:auto; padding:18px 18px 24px; font-size:14px; line-height:1.65}
+  .r{background:#ff5f6d;box-shadow:0 0 8px #ff5f6d}
+  .y{background:#ffc94d;box-shadow:0 0 8px #ffc94d}
+  .g{background:#4dffa0;box-shadow:0 0 8px #4dffa0}
+  .title{position:absolute;left:0;right:0;text-align:center;font-size:12px;letter-spacing:2px;color:var(--cyan);
+         text-shadow:0 0 8px rgba(79,240,255,.6);pointer-events:none;text-transform:uppercase}
+  .status{margin-left:auto;font-size:11px;color:var(--green);display:flex;align-items:center;gap:6px}
+  .status i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.6s infinite}
+  @keyframes pulse{50%{opacity:.3}}
+
+  .body{flex:1; overflow-y:auto; padding:20px 22px 26px; font-size:14px; line-height:1.7}
+  .body::-webkit-scrollbar{width:8px}
+  .body::-webkit-scrollbar-thumb{background:rgba(79,240,255,.25);border-radius:4px}
   .line{white-space:pre-wrap; word-break:break-word}
-  .prompt{color:var(--green)} .path{color:var(--blue)}
-  .dim{color:var(--dim)} .ok{color:var(--green)} .warn{color:var(--yellow)} .err{color:var(--red)}
-  .big{font-weight:600; font-size:16px; color:var(--yellow)}
+  .prompt{color:var(--cyan);text-shadow:0 0 6px rgba(79,240,255,.5)} .path{color:var(--violet)}
+  .dim{color:var(--dim)} .ok{color:var(--green);text-shadow:0 0 6px rgba(94,255,168,.5)}
+  .warn{color:var(--yellow)} .err{color:var(--red)}
+  .logo{color:var(--cyan);text-shadow:0 0 10px rgba(79,240,255,.7);font-weight:700;line-height:1.15;font-size:12px}
+  .big{
+    font-weight:700; font-size:18px; margin:4px 0;
+    background:linear-gradient(90deg,var(--cyan),var(--green),var(--yellow));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 8px rgba(79,240,255,.5));
+  }
   .inputline{display:flex; gap:8px; align-items:baseline}
   #cmd{
     flex:1; background:transparent; border:none; outline:none; color:var(--text);
-    font:inherit; caret-color:var(--yellow); min-width:0;
+    font:inherit; caret-color:var(--cyan); min-width:0;
   }
-  .hint{margin-top:6px}
-  .chip{display:inline-block;margin-top:4px;padding:2px 8px;border:1px solid #3a3f4a;border-radius:6px;color:var(--yellow);cursor:pointer}
-  .chip:hover{background:#2c3039}
+  .chip{display:inline-block;margin-top:4px;padding:3px 10px;border:1px solid rgba(79,240,255,.45);border-radius:6px;
+        color:var(--cyan);cursor:pointer;transition:.2s;box-shadow:0 0 10px rgba(79,240,255,.15) inset}
+  .chip:hover{background:rgba(79,240,255,.12);box-shadow:0 0 14px rgba(79,240,255,.4)}
+
+  /* PC: bigger and roomier */
+  @media (min-width:900px){
+    .body{font-size:16px;padding:26px 30px 30px}
+    .logo{font-size:14px}
+    .big{font-size:22px}
+    .title{font-size:13px}
+  }
+  @media (max-width:520px){ .logo{font-size:7.5px} .status span{display:none} }
 </style>
 </head>
 <body>
+<div class="grid"></div><div class="glow g1"></div><div class="glow g2"></div>
+
 <div class="win" onclick="document.getElementById('cmd').focus()">
   <div class="bar">
     <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-    <div class="title">kinen@roadster — terminal</div>
+    <div class="title">Roadster // Terminal</div>
+    <div class="status"><i></i><span>ONLINE</span></div>
   </div>
   <div class="body" id="out">
-    <div class="line dim">Roadster Terminal v1.0 — welcome 👋</div>
-    <div class="line dim">Type a command and press Enter. Type <span class="warn">help</span> to see commands.</div>
-    <div class="line hint">Try: <span class="chip" id="try">Check Roadster Artifacts</span></div>
-    <div class="line">&nbsp;</div>
-    <div class="inputline" id="inputline">
+    <div class="inputline" id="inputline" style="visibility:hidden">
       <span><span class="prompt">kinen@roadster</span>:<span class="path">~</span>$</span>
-      <input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+      <input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false">
     </div>
   </div>
 </div>
@@ -65,7 +116,7 @@
 const out = document.getElementById('out');
 const inputLine = document.getElementById('inputline');
 const cmd = document.getElementById('cmd');
-let busy = false;
+let busy = true;
 const history = []; let hIndex = 0;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -78,28 +129,54 @@ function print(html, cls){
   return d;
 }
 function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
-
-async function typeOut(text, cls, speed=22){
+async function typeOut(text, cls, speed=20){
   const d = print('', cls);
   for (const ch of text){ d.textContent += ch; out.scrollTop = out.scrollHeight; await sleep(speed); }
 }
 
+const LOGO =
+`██████╗  ██████╗  █████╗ ██████╗ ███████╗████████╗███████╗██████╗
+██╔══██╗██╔═══██╗██╔══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝██╔══██╗
+██████╔╝██║   ██║███████║██║  ██║███████╗   ██║   █████╗  ██████╔╝
+██╔══██╗██║   ██║██╔══██║██║  ██║╚════██║   ██║   ██╔══╝  ██╔══██╗
+██║  ██║╚██████╔╝██║  ██║██████╔╝███████║   ██║   ███████╗██║  ██║
+╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═════╝ ╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚═╝`;
+
+async function boot(){
+  await typeOut('> booting roadster.os ...', 'dim', 18);
+  await sleep(200);
+  for (const s of ['neural core','power cells','satellite link']){
+    const d = print(`  [<span class="warn"> .. </span>] ${s}`);
+    await sleep(260);
+    d.innerHTML = `  [<span class="ok"> OK </span>] ${s}`;
+  }
+  await sleep(200);
+  print(LOGO, 'logo');
+  print('&nbsp;');
+  print('Welcome 👋  Type a command and press <span class="warn">Enter</span>. Type <span class="warn">help</span> for commands.', 'dim');
+  print('Try: <span class="chip" id="try">Check Roadster Artifacts</span>');
+  print('&nbsp;');
+  document.getElementById('try').addEventListener('click', e => {
+    e.stopPropagation(); if (!busy) run('Check Roadster Artifacts');
+  });
+  busy = false; inputLine.style.visibility = 'visible'; cmd.focus();
+}
+
 async function checkRoadster(){
   const items = ['Slides','Animations','Photos','Music','Website link'];
-  await typeOut('Connecting to Roadster servers...', 'dim');
-  await sleep(300);
+  await typeOut('> scanning Roadster artifacts ...', 'dim');
+  await sleep(250);
   for (const it of items){
-    const d = print(`  [<span class="warn">....</span>] ${it}`);
-    await sleep(450);
+    const d = print(`  [<span class="warn"> .. </span>] ${it}`);
+    await sleep(420);
     d.innerHTML = `  [<span class="ok"> OK </span>] ${it}`;
   }
-  await sleep(300);
-  // progress bar
+  await sleep(250);
   const bar = print('');
-  for (let i=0;i<=20;i++){
-    bar.innerHTML = `  <span class="ok">${'█'.repeat(i)}</span><span class="dim">${'░'.repeat(20-i)}</span> ${i*5}%`;
+  for (let i=0;i<=24;i++){
+    bar.innerHTML = `  <span class="ok">${'▰'.repeat(i)}</span><span class="dim">${'▱'.repeat(24-i)}</span> <span class="prompt">${Math.round(i/24*100)}%</span>`;
     out.scrollTop = out.scrollHeight;
-    await sleep(45);
+    await sleep(40);
   }
   print('&nbsp;');
   await typeOut('✓ I checked up — that\'s alllll in! 🚗⚡', 'big', 35);
@@ -137,9 +214,11 @@ cmd.addEventListener('keydown', e => {
   else if (e.key === 'ArrowUp' && history.length){ hIndex=Math.max(0,hIndex-1); cmd.value=history[hIndex]; e.preventDefault(); }
   else if (e.key === 'ArrowDown' && history.length){ hIndex=Math.min(history.length,hIndex+1); cmd.value=history[hIndex]||''; e.preventDefault(); }
 });
-document.getElementById('try').addEventListener('click', e => {
-  e.stopPropagation(); if (!busy) run('Check Roadster Artifacts');
+// on PC: typing anywhere goes into the terminal
+document.addEventListener('keydown', e => {
+  if (document.activeElement !== cmd && !e.ctrlKey && !e.metaKey && !e.altKey) cmd.focus();
 });
+boot();
 </script>
 </body>
 </html>
